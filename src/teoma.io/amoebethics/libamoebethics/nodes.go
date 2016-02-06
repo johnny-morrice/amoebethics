@@ -1,4 +1,4 @@
-package libamboethics
+package libamoebethics
 
 import (
     "fmt"

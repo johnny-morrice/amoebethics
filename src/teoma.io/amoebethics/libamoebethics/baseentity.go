@@ -1,4 +1,4 @@
-package libamboethics
+package libamoebethics
 
 import (
     "github.com/gonum/matrix/mat64"
