@@ -67,10 +67,29 @@ func (n *SimNode) Update() {
     n.handle(n)
 }
 
-func knownNodeName(name string) bool {
-    return false
+type simNodeFactory interface {
+     build(t *Torus) (Handler, Greeter)
 }
 
-func makeEntity(name string) (Handler, Greeter) {
-    return nil, nil
+func init() {
+    // Add sheeple + tv + activists to nodeFactories
+    nodeFactories = make(map[string]simNodeFactory)
+    nodeFactories["sheeple"] = newSheepleFactory()
+    nodeFactories["activist"] = newActivistFactory()
+    nodeFactories["tv"] = newTvFactory()
+}
+
+var nodeFactories map[string]simNodeFactory
+
+func knownNodeName(name string) bool {
+    _, ok := nodeFactories[name]
+    return ok
+}
+
+func makeEntity(name string, t *Torus) (Handler, Greeter) {
+    fact, ok := nodeFactories[name]
+    if !ok {
+        panic("Unknown node: " + name)
+    }
+    return fact.build(t)
 }

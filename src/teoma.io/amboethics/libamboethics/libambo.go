@@ -35,7 +35,7 @@ type Sim struct {
     outch chan<- []UserNode
     itercount int
     nodes []*SimNode
-    geometry Geometry
+    torus Torus
 }
 
 func MakeSim(in SimInput, outch chan<- []UserNode) *Sim {
@@ -47,7 +47,7 @@ func MakeSim(in SimInput, outch chan<- []UserNode) *Sim {
     s := &Sim{}
     s.nodes = nodes
     s.itercount = in.Itercount
-    s.geometry = in.Geometry
+    s.torus = in.Torus
     return s
 }
 
@@ -124,10 +124,6 @@ func (s *Sim) ceach(f func(n Neighbour)) {
     hold.Wait()
 }
 
-type Geometry struct {
-    Dim Vec2
-}
-
 type Belief struct {
     opp Opinion
     name string
@@ -143,7 +139,7 @@ const (
 
 type SimInput struct {
     Itercount int
-    Geometry Geometry
+    Torus Torus
     Nodes []UserNode
 }
 
@@ -152,8 +148,8 @@ func (in SimInput) Validate() error {
         return fmt.Errorf("Invalid itercount. Was %v.", in.Itercount)
     }
 
-    if in.Geometry.Dim.X < 0 || in.Geometry.Dim.Y < 0 {
-        return fmt.Errorf("Invalid geometry.  Was %v.", in.Geometry)
+    if in.Torus.W < 0 || in.Torus.H < 0 {
+        return fmt.Errorf("Invalid torus.  Was %v.", in.Torus)
     }
 
     for i, n := range in.Nodes {
