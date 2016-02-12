@@ -10,7 +10,7 @@ type UserNode struct {
 }
 
 func (un *UserNode) Validate() error {
-    if !knownNodeName(un.name) {
+    if !KnownNodeName(un.name) {
         return fmt.Errorf("Unknown node name: %v", un.name)
     }
     return nil
@@ -18,6 +18,7 @@ func (un *UserNode) Validate() error {
 
 type NodeRef struct {
     Neighbours []int
+    Extension string
 }
 
 type BaseNode struct {
@@ -29,8 +30,7 @@ type BaseNode struct {
 
 type MachineNode struct {
     neighbours []Neighbour
-    handle Handler
-    greet Greeter
+    entity Entity
 }
 
 type SimNode struct {
@@ -38,58 +38,44 @@ type SimNode struct {
     BaseNode
 }
 
-type Handler func(n *SimNode)
-type Greeter func(n *SimNode)
+type Entity interface {
+    Handle(m *SimNode)
+    Greet(m *SimNode) bool
+    Serialize() string
+}
 
 type Neighbour struct {
     node *SimNode
     i int
 }
 
-func makeNode(un *UserNode) *SimNode {
+func MakeNode(un *UserNode, t Torus) *SimNode {
     sn := &SimNode{}
-    h, g := makeEntity(un.name)
+    sn.entity = MakeEntity(un, t)
     sn.BaseNode = un.BaseNode
     sn.neighbours = []Neighbour{}
-    sn.handle = h
-    sn.greet = g
     return sn
+}
+
+func (n *SimNode) clearNeighbours() {
+    cnt := len(n.neighbours)
+    // Clear to allow garbage collection of pointers, if any
+    for i := 0; i < cnt; i++ {
+        n.neighbours[i] = Neighbour{}
+    }
+    // Reslice to avoid allocation
+    n.neighbours = n.neighbours[:0]
 }
 
 func (n *SimNode) Handshake(m Neighbour) {
     mn := m.node
     if n != mn {
-        n.greet(mn)
+        if n.entity.Greet(mn) {
+            n.neighbours = append(n.neighbours, m)
+        }
     }
 }
 
 func (n *SimNode) Update() {
-    n.handle(n)
-}
-
-type simNodeFactory interface {
-     build(t *Torus) (Handler, Greeter)
-}
-
-func init() {
-    // Add sheeple + tv + activists to nodeFactories
-    nodeFactories = make(map[string]simNodeFactory)
-    nodeFactories["sheeple"] = newSheepleFactory()
-    nodeFactories["activist"] = newActivistFactory()
-    nodeFactories["tv"] = newTvFactory()
-}
-
-var nodeFactories map[string]simNodeFactory
-
-func knownNodeName(name string) bool {
-    _, ok := nodeFactories[name]
-    return ok
-}
-
-func makeEntity(name string, t *Torus) (Handler, Greeter) {
-    fact, ok := nodeFactories[name]
-    if !ok {
-        panic("Unknown node: " + name)
-    }
-    return fact.build(t)
+    n.entity.Handle(n)
 }

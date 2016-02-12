@@ -2,7 +2,7 @@ package main
 
 import (
     "os"
-    lib "teoma.io/amboethics/libamboethics"
+    lib "teoma.io/amoebethics/libamoebethics"
 )
 
 func main() {

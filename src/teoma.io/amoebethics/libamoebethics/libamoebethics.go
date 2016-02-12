@@ -7,53 +7,53 @@ import (
     "sync"
 )
 
-func ReadSimInput(r io.Reader) (SimInput, error) {
+func ReadSimInput(r io.Reader) (SimPacket, error) {
     dec := json.NewDecoder(r)
-    s := SimInput{}
+    s := SimPacket{}
     err := dec.Decode(&s)
     return s, err
 }
 
-func WriteSimOutput(o []UserNode, w io.Writer) error {
+func WriteSimOutput(o SimPacket, w io.Writer) error {
     enc := json.NewEncoder(w)
     return enc.Encode(o)
 }
 
-func Simulate(s SimInput) (<-chan []UserNode, error) {
+func Simulate(s SimPacket) (<-chan SimPacket, error) {
     err := s.Validate()
     if err != nil {
         return nil, err
     }
 
-    outch := make(chan []UserNode)
+    outch := make(chan SimPacket)
     sim := MakeSim(s, outch)
     sim.ForkSim()
     return outch, nil
 }
 
 type Sim struct {
-    outch chan<- []UserNode
-    itercount int
+    SimBase
+    outch chan<- SimPacket
     nodes []*SimNode
-    torus Torus
 }
 
-func MakeSim(in SimInput, outch chan<- []UserNode) *Sim {
+func MakeSim(in SimPacket, outch chan<- SimPacket) *Sim {
     // We ignore input nodes neighbours
     nodes := make([]*SimNode, len(in.Nodes))
     for i, un := range in.Nodes {
-        nodes[i] = makeNode(&un)
+        nodes[i] = MakeNode(&un, in.Torus)
     }
     s := &Sim{}
     s.nodes = nodes
-    s.itercount = in.Itercount
-    s.torus = in.Torus
+    s.SimBase = in.SimBase
     return s
 }
 
 func (s *Sim) ForkSim() {
     go func() {
-        for i := 0; i < s.itercount; i++ {
+        // Cat input out for other programs down the pipeline
+        s.outch<- s.moment()
+        for i := 0; i < s.Itermax; i++ {
             s.step()
             s.outch<- s.moment()
         }
@@ -63,27 +63,33 @@ func (s *Sim) ForkSim() {
 func (s *Sim) step() {
     s.attachNodes()
     s.nodeHandlers()
+    s.Iteration++
 }
 
-func (s *Sim) moment() []UserNode {
-    out := make([]UserNode, len(s.nodes))
+func (s *Sim) moment() SimPacket {
+    usernodes := make([]UserNode, len(s.nodes))
     s.ceach(func (n Neighbour) {
         un := UserNode{}
         sn := n.node
         un.BaseNode = sn.BaseNode
         uneigh := make([]int, len(sn.neighbours))
         un.Neighbours = uneigh
+        un.Extension = sn.entity.Serialize()
         for i, m := range sn.neighbours {
             uneigh[i] = m.i
         }
-        out[n.i] = un
+        usernodes[n.i] = un
     })
+    out := SimPacket{}
+    out.SimBase = s.SimBase
+    out.Nodes = usernodes
     return out
 }
 
 
 func (s *Sim) attachNodes() {
     s.ceach(func (n Neighbour) {
+        n.node.clearNeighbours()
         s.each(func (m Neighbour) {
             n.node.Handshake(m)
         })
@@ -137,15 +143,20 @@ const (
     DontKnow
 )
 
-type SimInput struct {
-    Itercount int
+type SimBase struct {
+    Iteration int
+    Itermax int
     Torus Torus
+}
+
+type SimPacket struct {
+    SimBase
     Nodes []UserNode
 }
 
-func (in SimInput) Validate() error {
-    if in.Itercount < 1 {
-        return fmt.Errorf("Invalid itercount. Was %v.", in.Itercount)
+func (in SimPacket) Validate() error {
+    if in.Itermax < 1 {
+        return fmt.Errorf("Invalid itermax. Was %v.", in.Itermax)
     }
 
     if in.Torus.W < 0 || in.Torus.H < 0 {
