@@ -25,7 +25,6 @@ func (sheep *Sheeple) Handle(n *lib.SimNode, s *lib.Sim) {
         }
     }
 
-    // Don't believe this stuff
     sheep.RandSteer()
     sheep.Move(n.P)
     s.Torus.Map(n.P)
