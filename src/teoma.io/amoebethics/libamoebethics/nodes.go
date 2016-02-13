@@ -1,19 +1,13 @@
 package libamoebethics
 
 import (
-    "fmt"
+    "bytes"
+    "io"
 )
 
 type UserNode struct {
     BaseNode
     NodeRef
-}
-
-func (un *UserNode) Validate() error {
-    if !KnownNodeName(un.name) {
-        return fmt.Errorf("Unknown node name: %v", un.name)
-    }
-    return nil
 }
 
 type NodeRef struct {
@@ -40,8 +34,9 @@ type SimNode struct {
 
 type Entity interface {
     Handle(m *SimNode)
-    Greet(m *SimNode) bool
-    Serialize() string
+    Greet(n *SimNode, m *SimNode)
+    Serialize(w io.Writer) error
+    Deserialize(r io.Reader) error
 }
 
 type Neighbour struct {
@@ -49,12 +44,16 @@ type Neighbour struct {
     i int
 }
 
-func MakeNode(un *UserNode, t Torus) *SimNode {
+func MakeNode(un *UserNode, t Torus, yard EntityYard) (*SimNode, error) {
     sn := &SimNode{}
-    sn.entity = MakeEntity(un, t)
+    ent, err := yard.MakeEntity(un, t)
+    if err != nil {
+        return nil, err
+    }
+    sn.entity = ent
     sn.BaseNode = un.BaseNode
     sn.neighbours = []Neighbour{}
-    return sn
+    return sn, nil
 }
 
 func (n *SimNode) clearNeighbours() {
@@ -70,12 +69,20 @@ func (n *SimNode) clearNeighbours() {
 func (n *SimNode) Handshake(m Neighbour) {
     mn := m.node
     if n != mn {
-        if n.entity.Greet(mn) {
-            n.neighbours = append(n.neighbours, m)
-        }
+        n.entity.Greet(n, mn)
     }
 }
 
 func (n *SimNode) Update() {
     n.entity.Handle(n)
+}
+
+func Node2String(n *SimNode) string {
+    buff := bytes.Buffer{}
+    err := n.entity.Serialize(&buff)
+    if err != nil {
+        // Should never happen
+        panic(err)
+    }
+    return buff.String()
 }

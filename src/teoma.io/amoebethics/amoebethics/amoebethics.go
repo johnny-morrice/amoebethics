@@ -3,6 +3,7 @@ package main
 import (
     "os"
     lib "teoma.io/amoebethics/libamoebethics"
+    ext "teoma.io/amoebethics/amoebext"
 )
 
 func main() {
@@ -11,7 +12,8 @@ func main() {
         panic(inerr)
     }
 
-    outch, simerr := lib.Simulate(input)
+    extensions := ext.StdExtensions()
+    outch, simerr := lib.Simulate(input, extensions)
 
     if simerr != nil {
         panic(simerr)

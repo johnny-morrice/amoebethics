@@ -19,14 +19,17 @@ func WriteSimOutput(o SimPacket, w io.Writer) error {
     return enc.Encode(o)
 }
 
-func Simulate(s SimPacket) (<-chan SimPacket, error) {
-    err := s.Validate()
-    if err != nil {
-        return nil, err
+func Simulate(s SimPacket, yard EntityYard) (<-chan SimPacket, error) {
+    verr := s.Validate()
+    if verr != nil {
+        return nil, verr
     }
 
     outch := make(chan SimPacket)
-    sim := MakeSim(s, outch)
+    sim, serr := MakeSim(s, yard, outch)
+    if serr != nil {
+        return nil, serr
+    }
     sim.ForkSim()
     return outch, nil
 }
@@ -37,16 +40,20 @@ type Sim struct {
     nodes []*SimNode
 }
 
-func MakeSim(in SimPacket, outch chan<- SimPacket) *Sim {
+func MakeSim(in SimPacket, yard EntityYard, outch chan<- SimPacket) (*Sim, error) {
     // We ignore input nodes neighbours
     nodes := make([]*SimNode, len(in.Nodes))
     for i, un := range in.Nodes {
-        nodes[i] = MakeNode(&un, in.Torus)
+        n, err := MakeNode(&un, in.Torus, yard)
+        if err != nil {
+            return nil, err
+        }
+        nodes[i] = n
     }
     s := &Sim{}
     s.nodes = nodes
     s.SimBase = in.SimBase
-    return s
+    return s, nil
 }
 
 func (s *Sim) ForkSim() {
@@ -74,7 +81,7 @@ func (s *Sim) moment() SimPacket {
         un.BaseNode = sn.BaseNode
         uneigh := make([]int, len(sn.neighbours))
         un.Neighbours = uneigh
-        un.Extension = sn.entity.Serialize()
+        un.Extension = Node2String(sn)
         for i, m := range sn.neighbours {
             uneigh[i] = m.i
         }
@@ -161,13 +168,6 @@ func (in SimPacket) Validate() error {
 
     if in.Torus.W < 0 || in.Torus.H < 0 {
         return fmt.Errorf("Invalid torus.  Was %v.", in.Torus)
-    }
-
-    for i, n := range in.Nodes {
-        nerr := n.Validate()
-        if nerr != nil {
-            return fmt.Errorf("Error at node %v: %v", i, nerr)
-        }
     }
 
     return nil
