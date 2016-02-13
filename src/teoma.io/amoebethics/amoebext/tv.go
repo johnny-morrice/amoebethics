@@ -1,36 +1,46 @@
 package amoebext
 
 import (
+    "encoding/json"
     "io"
     lib "teoma.io/amoebethics/libamoebethics"
 )
 
 type Tv struct {
-
+    Speaker
 }
 
 var _ lib.Entity = (*Tv)(nil)
 
-func (tv *Tv) Handle(m *lib.SimNode) {
-
+func (tv *Tv) Handle(n *lib.SimNode, s *lib.Sim) {
+    n.Expression.Clear()
+    if tv.Speaking() {
+        b := n.Beliefs.Rand()
+        n.Expression.HoldIrratBelief(b)
+    }
 }
 
-func (tv *Tv) Greet(n *lib.SimNode, m *lib.SimNode) {
+func (tv *Tv) Greet(n *lib.SimNode, m *lib.SimNode, s *lib.Sim) {
+    if tv.Heard(n, m, s.Torus) {
+        m.AddNeigbour(n)
+    }
 }
 
 func (tv *Tv) Serialize(w io.Writer) error {
-    return nil
+    enc := json.NewEncoder(w)
+    return enc.Encode(tv)
 }
 
 func (tv *Tv) Deserialize(r io.Reader) error {
-    return nil
+    dec := json.NewDecoder(r)
+    return dec.Decode(tv)
 }
 
 type TvFactory struct {}
 
 var _ lib.EntityFactory = TvFactory{}
 
-func (sf TvFactory) Build(un *lib.UserNode, t lib.Torus) (lib.Entity, error) {
+func (sf TvFactory) Build(un *lib.UserNode, base lib.SimBase) (lib.Entity, error) {
     tv := &Tv{}
     err := decodeEntity(tv, un)
     return tv, err

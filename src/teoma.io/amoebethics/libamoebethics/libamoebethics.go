@@ -37,21 +37,21 @@ func Simulate(s SimPacket, yard EntityYard) (<-chan SimPacket, error) {
 type Sim struct {
     SimBase
     outch chan<- SimPacket
-    nodes []*SimNode
+    Nodes []*SimNode
 }
 
 func MakeSim(in SimPacket, yard EntityYard, outch chan<- SimPacket) (*Sim, error) {
     // We ignore input nodes neighbours
     nodes := make([]*SimNode, len(in.Nodes))
     for i, un := range in.Nodes {
-        n, err := MakeNode(&un, in.Torus, yard)
+        n, err := MakeNode(&un, in.SimBase, yard)
         if err != nil {
             return nil, err
         }
         nodes[i] = n
     }
     s := &Sim{}
-    s.nodes = nodes
+    s.Nodes = nodes
     s.SimBase = in.SimBase
     return s, nil
 }
@@ -74,18 +74,17 @@ func (s *Sim) step() {
 }
 
 func (s *Sim) moment() SimPacket {
-    usernodes := make([]UserNode, len(s.nodes))
-    s.ceach(func (n Neighbour) {
+    usernodes := make([]UserNode, len(s.Nodes))
+    s.Ceach(func (sn *SimNode) {
         un := UserNode{}
-        sn := n.node
         un.BaseNode = sn.BaseNode
-        uneigh := make([]int, len(sn.neighbours))
+        uneigh := make([]int, len(sn.Neighbours))
         un.Neighbours = uneigh
         un.Extension = Node2String(sn)
-        for i, m := range sn.neighbours {
-            uneigh[i] = m.i
+        for i, m := range sn.Neighbours {
+            uneigh[i] = m.Id
         }
-        usernodes[n.i] = un
+        usernodes[sn.Id] = un
     })
     out := SimPacket{}
     out.SimBase = s.SimBase
@@ -95,40 +94,31 @@ func (s *Sim) moment() SimPacket {
 
 
 func (s *Sim) attachNodes() {
-    s.ceach(func (n Neighbour) {
-        n.node.clearNeighbours()
-        s.each(func (m Neighbour) {
-            n.node.Handshake(m)
+    s.Ceach(func (n *SimNode) {
+        n.ClearNeighbours()
+        s.Each(func (m *SimNode) {
+            n.Handshake(m, s)
         })
     })
 }
 
 func (s *Sim) nodeHandlers() {
-    s.ceach(func (n Neighbour) {
-        n.node.Update()
+    s.Ceach(func (n *SimNode) {
+        n.Update(s)
     })
 }
 
-func (s *Sim) each(f func(n Neighbour)) {
-    count := len(s.nodes)
-    for i := 0; i < count; i++ {
-        n := Neighbour{
-            node: s.nodes[i],
-            i: i,
-        }
+func (s *Sim) Each(f func(n *SimNode)) {
+    for _, n := range s.Nodes {
         f(n)
     }
 }
 
-func (s *Sim) ceach(f func(n Neighbour)) {
-    count := len(s.nodes)
+func (s *Sim) Ceach(f func(n *SimNode)) {
+    count := len(s.Nodes)
     hold := sync.WaitGroup{}
     hold.Add(count)
-    for i := 0; i < count; i++ {
-        n := Neighbour{
-            node: s.nodes[i],
-            i: i,
-        }
+    for _, n := range s.Nodes {
         go func() {
             f(n)
             hold.Done()
@@ -137,23 +127,11 @@ func (s *Sim) ceach(f func(n Neighbour)) {
     hold.Wait()
 }
 
-type Belief struct {
-    opp Opinion
-    name string
-}
-
-type Opinion uint8
-
-const (
-    IsTrue = Opinion(iota)
-    IsFalse
-    DontKnow
-)
-
 type SimBase struct {
     Iteration int
     Itermax int
     Torus Torus
+    BeliefMap map[string]uint
 }
 
 type SimPacket struct {

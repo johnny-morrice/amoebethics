@@ -3,13 +3,13 @@ package libamoebethics
 type EntityYard map[string]EntityFactory
 
 type EntityFactory interface {
-     Build(un *UserNode, t Torus) (Entity, error)
+     Build(un *UserNode, base SimBase) (Entity, error)
 }
 
-func (yard EntityYard) MakeEntity(un *UserNode, t Torus) (Entity, error) {
-    fact, ok := yard[un.name]
+func (yard EntityYard) MakeEntity(un *UserNode, base SimBase) (Entity, error) {
+    fact, ok := yard[un.Name]
     if !ok {
-        panic("Unknown node type: " + un.name)
+        panic("Unknown node type: " + un.Name)
     }
-    return fact.Build(un, t)
+    return fact.Build(un, base)
 }

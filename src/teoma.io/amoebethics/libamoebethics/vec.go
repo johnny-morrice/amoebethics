@@ -2,47 +2,52 @@ package libamoebethics
 
 import (
     "github.com/gonum/matrix/mat64"
-    m "math"
+    "math"
 )
+
+type UserVec struct {
+    X float64
+    Y float64
+}
+
+func UserVec2BlasVec(v UserVec) *mat64.Vector {
+    return Vec2(v.X, v.Y)
+}
+
+func BlasVec2UserVec(v *mat64.Vector) UserVec {
+    u := UserVec{}
+    u.X = v.At(0, 0)
+    u.Y = v.At(1, 0)
+    return u
+}
 
 type Torus struct {
     W float64
     H float64
 }
 
-type Vec2 struct {
-    X float64
-    Y float64
-}
+func (t Torus) Map(v *mat64.Vector) {
+    x := v.At(0, 0)
+    y := v.At(1, 0)
 
-var _ mat64.Matrix = Vec2{}
-
-func (v Vec2) Dims() (r, c int) {
-    return 2, 1
-}
-
-func (v Vec2) At(i, j int) float64 {
-    if j != 0 {
-        panic("Vec2 column out of bounds")
+    remx := x
+    right := t.W / 2
+    if math.Abs(x) > right  {
+        remx = math.Mod(t.W, -x)
     }
-    switch i {
-    case 0:
-        return v.X
-    case 1:
-        return v.Y
-    default:
-        panic("Vec2 row out of bounds")
-        return 0.0 // Should never happen
+    remy := y
+    top := t.H / 2
+    if math.Abs(y) > top {
+        remy = math.Mod(t.H, -y)
     }
+
+    v.SetVec(0, remx)
+    v.SetVec(1, remy)
 }
 
-func (v Vec2) T() mat64.Matrix {
-    return mat64.Transpose{Matrix: v}
-}
-
-func (t Torus) explodes(center *mat64.Dense, radius float64, pos *mat64.Dense) bool {
+func (t Torus) Explodes(center *mat64.Vector, radius float64, pos *mat64.Vector) bool {
     diff := mat64.DenseCopyOf(center)
-    for _, p := range t.projections(pos) {
+    for _, p := range t.Projections(pos) {
         diff.Sub(center, p)
         if mat64.Det(diff) < radius {
             return true
@@ -51,18 +56,18 @@ func (t Torus) explodes(center *mat64.Dense, radius float64, pos *mat64.Dense) b
     return false
 }
 
-func (t Torus) projections(pos *mat64.Dense) []*mat64.Dense {
-    right := Vec2{t.W, 0.0}
-    top := Vec2{0.0, t.H}
-    left := Vec2{-t.W, 0.0}
-    bottom := Vec2{0.0, -t.H}
+func (t Torus) Projections(pos *mat64.Vector) []*mat64.Vector {
+    right := Vec2(t.W, 0.0)
+    top := Vec2(0.0, t.H)
+    left := Vec2(-t.W, 0.0)
+    bottom := Vec2(0.0, -t.H)
 
     const sq = 3
     const pcnt = sq * sq
-    pro := make([]*mat64.Dense, pcnt)
-    zero := Vec2{0.0, 0.0}
+    pro := make([]*mat64.Vector, pcnt)
+    zero := Vec2(0.0, 0.0)
     for w := 0; w < sq; w++ {
-        var vw Vec2
+        var vw *mat64.Vector
         if w == 0 {
             vw = left
         } else if w == 2 {
@@ -72,13 +77,14 @@ func (t Torus) projections(pos *mat64.Dense) []*mat64.Dense {
         }
         for h := 0; h < sq; h++ {
             i := w + (h * sq)
-            p := mat64.DenseCopyOf(vw)
+            p := Vec2(0.0, 0.0)
+            p.AddVec(vw, pos)
             pro[i] = p
 
             if h == 0 {
-                p.Add(p, top)
+                p.AddVec(p, top)
             } else if h == 2 {
-                p.Add(p, bottom)
+                p.AddVec(p, bottom)
             }
         }
     }
@@ -86,15 +92,6 @@ func (t Torus) projections(pos *mat64.Dense) []*mat64.Dense {
     return pro
 }
 
-func steer(unit *mat64.Dense, theta float64) *mat64.Dense {
-    mat := []float64 {
-        m.Cos(theta),
-        -m.Sin(theta),
-        m.Sin(theta),
-        m.Cos(theta),
-    }
-    rot := mat64.NewDense(2, 2, mat)
-    turned := mat64.DenseCopyOf(unit)
-    turned.Mul(rot, unit)
-    return turned
+func Vec2(x, y float64) *mat64.Vector {
+    return mat64.NewVector(2, []float64{x, y})
 }
