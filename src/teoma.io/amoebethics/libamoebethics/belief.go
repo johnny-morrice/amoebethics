@@ -21,9 +21,8 @@ const (
 
 type BeliefSet []Opinion
 
-func MakeBeliefSet(belm map[string]uint, held []Belief) BeliefSet {
-    cnt := len(belm)
-    sl := make([]Opinion, cnt)
+func MakeBeliefSet(bels []string, held []Belief) BeliefSet {
+    sl := make([]Opinion, len(bels))
     for _, b := range held {
         sl[b.Id] = b.Opp
     }

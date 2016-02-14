@@ -53,7 +53,7 @@ func MakeNode(un *UserNode, base SimBase, yard EntityYard) (*SimNode, error) {
     sn.Entity = ent
     sn.BaseNode = un.BaseNode
     sn.Neighbours = []*SimNode{}
-    sn.Beliefs = MakeBeliefSet(base.BeliefMap, un.Beliefs)
+    sn.Beliefs = MakeBeliefSet(base.Beliefs, un.Beliefs)
     sn.P = UserVec2BlasVec(un.P)
     return sn, nil
 }

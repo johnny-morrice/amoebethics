@@ -131,7 +131,7 @@ type SimBase struct {
     Iteration int
     Itermax int
     Torus Torus
-    BeliefMap map[string]uint
+    Beliefs []string
 }
 
 type SimPacket struct {
