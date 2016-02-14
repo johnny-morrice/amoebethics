@@ -3,3 +3,4 @@ pkg
 *.a
 *.o
 src/github.com
+scratch
