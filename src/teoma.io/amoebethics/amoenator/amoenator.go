@@ -26,7 +26,6 @@ func main() {
             }
         }
     }
-
 }
 
 func runFrameTunnel(yard core.EntityYard, count uint) <-chan chan animate.Frame {
