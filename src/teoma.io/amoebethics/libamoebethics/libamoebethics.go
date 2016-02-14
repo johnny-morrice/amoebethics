@@ -76,14 +76,7 @@ func (s *Sim) step() {
 func (s *Sim) moment() SimPacket {
     usernodes := make([]UserNode, len(s.Nodes))
     s.Ceach(func (sn *SimNode) {
-        un := UserNode{}
-        un.BaseNode = sn.BaseNode
-        uneigh := make([]int, len(sn.Neighbours))
-        un.Neighbours = uneigh
-        un.Extension = Node2String(sn)
-        for i, m := range sn.Neighbours {
-            uneigh[i] = m.Id
-        }
+        un := SimNode2UserNode(sn)
         usernodes[sn.Id] = un
     })
     out := SimPacket{}
@@ -105,6 +98,9 @@ func (s *Sim) attachNodes() {
 func (s *Sim) nodeHandlers() {
     s.Ceach(func (n *SimNode) {
         n.Update(s)
+    })
+    s.Each(func (n *SimNode) {
+        n.SwapFrames()
     })
 }
 
