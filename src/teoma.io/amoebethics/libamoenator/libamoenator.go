@@ -68,8 +68,9 @@ type renderer struct {
     nodes []*core.SimNode
 }
 
-func MakeRenderer(pkt core.SimPacket, yard core.EntityYard) (renderer, error) {
+func MakeRenderer(pkt core.SimPacket, yard core.EntityYard, framecnt uint) (renderer, error) {
     r := renderer{}
+    r.framecnt = framecnt
     r.pre.Palette = __colors
     colcnt := len(r.pre.Palette)
     if len(pkt.Beliefs) > colcnt {
