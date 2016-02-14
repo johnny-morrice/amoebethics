@@ -52,6 +52,10 @@ func (s *Sheeple) Deserialize(r io.Reader) error {
     return nil
 }
 
+func (sheeple *Sheeple) Interpolate(n *lib.SimNode, time float64) {
+
+}
+
 type SheepleFactory struct {}
 
 var _ lib.EntityFactory = SheepleFactory{}

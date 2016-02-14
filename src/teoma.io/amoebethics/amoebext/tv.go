@@ -36,6 +36,10 @@ func (tv *Tv) Deserialize(r io.Reader) error {
     return dec.Decode(tv)
 }
 
+func (tv *Tv) Interpolate(n *lib.SimNode, time float64) {
+
+}
+
 type TvFactory struct {}
 
 var _ lib.EntityFactory = TvFactory{}
