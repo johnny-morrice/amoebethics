@@ -45,11 +45,12 @@ func (t Torus) Map(v *mat64.Vector) {
     v.SetVec(1, remy)
 }
 
-func (t Torus) Explodes(center *mat64.Vector, radius float64, pos *mat64.Vector) bool {
-    diff := mat64.DenseCopyOf(center)
+func (t Torus) Explodes(radius float64, center, pos *mat64.Vector) bool {
+    diff := Vec2(0.0, 0.0)
+    diff.CloneVec(center)
     for _, p := range t.Projections(pos) {
-        diff.Sub(center, p)
-        if mat64.Det(diff) < radius {
+        diff.SubVec(center, p)
+        if mat64.Norm(diff, 2) < radius {
             return true
         }
     }

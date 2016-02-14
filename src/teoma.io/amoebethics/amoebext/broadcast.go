@@ -17,5 +17,5 @@ func (b Speaker) Speaking() bool {
 }
 
 func (b Speaker) Heard(n *lib.SimNode, m *lib.SimNode, t lib.Torus) bool {
-    return t.Explodes(n.P, b.R, m.P)
+    return t.Explodes(b.R, n.P, m.P)
 }
