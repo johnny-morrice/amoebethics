@@ -93,6 +93,10 @@ func (n *SimNode) Handshake(m *SimNode, s *Sim) {
     }
 }
 
+func (n *SimNode) Interpolate(time float64) {
+    n.Entity.Interpolate(n, time)
+}
+
 func (n *SimNode) Update(s *Sim) {
     n.Entity.Handle(n.nextFrame, s)
 }
