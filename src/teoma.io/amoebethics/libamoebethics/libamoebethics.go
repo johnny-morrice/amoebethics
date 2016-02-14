@@ -7,26 +7,26 @@ import (
     "sync"
 )
 
-func ReadSimInput(r io.Reader) (SimPacket, error) {
+func ReadSimPkt(r io.Reader) (SimPacket, error) {
     dec := json.NewDecoder(r)
-    s := SimPacket{}
-    err := dec.Decode(&s)
-    return s, err
+    pkt := SimPacket{}
+    err := dec.Decode(&pkt)
+    return pkt, err
 }
 
-func WriteSimOutput(o SimPacket, w io.Writer) error {
+func WriteSimPkt(pkt SimPacket, w io.Writer) error {
     enc := json.NewEncoder(w)
-    return enc.Encode(o)
+    return enc.Encode(pkt)
 }
 
-func Simulate(s SimPacket, yard EntityYard) (<-chan SimPacket, error) {
-    verr := s.Validate()
+func Simulate(pkt SimPacket, yard EntityYard) (<-chan SimPacket, error) {
+    verr := pkt.Validate()
     if verr != nil {
         return nil, verr
     }
 
     outch := make(chan SimPacket)
-    sim, serr := MakeSim(s, yard, outch)
+    sim, serr := MakeSim(pkt, yard, outch)
     if serr != nil {
         return nil, serr
     }

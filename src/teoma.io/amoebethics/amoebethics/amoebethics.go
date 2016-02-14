@@ -1,28 +1,34 @@
 package main
 
 import (
+    "fmt"
     "os"
     lib "teoma.io/amoebethics/libamoebethics"
     ext "teoma.io/amoebethics/amoebext"
 )
 
 func main() {
-    input, inerr := lib.ReadSimInput(os.Stdin)
+    input, inerr := lib.ReadSimPkt(os.Stdin)
     if inerr != nil {
-        panic(inerr)
+        fatal(inerr)
     }
 
     extensions := ext.StdExtensions()
     outch, simerr := lib.Simulate(input, extensions)
 
     if simerr != nil {
-        panic(simerr)
+        fatal(simerr)
     }
 
     for out := range outch {
-        werr := lib.WriteSimOutput(out, os.Stdout)
+        werr := lib.WriteSimPkt(out, os.Stdout)
         if werr != nil {
-            panic(werr)
+            fatal(werr)
         }
     }
+}
+
+func fatal(e error) {
+    fmt.Fprintf(os.Stderr, "Fatal: %v", e)
+    os.Exit(1)
 }

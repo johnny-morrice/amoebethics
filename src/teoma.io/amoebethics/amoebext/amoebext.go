@@ -1,11 +1,10 @@
 package amoebext
 
 import (
-    "bytes"
+    "strings"
     lib "teoma.io/amoebethics/libamoebethics"
 )
 
 func decodeEntity(e lib.Entity, un *lib.UserNode) error {
-    buff := bytes.NewBufferString(un.Extension)
-    return e.Deserialize(buff)
+    return e.Deserialize(strings.NewReader(un.Extension))
 }

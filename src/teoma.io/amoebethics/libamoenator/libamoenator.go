@@ -2,6 +2,8 @@ package libamoenator
 
 import (
     "fmt"
+    "io"
+    "encoding/json"
     core "teoma.io/amoebethics/libamoebethics"
     ext "teoma.io/amoebethics/amoebext"
 )
@@ -26,6 +28,18 @@ func MakeFrame(pre PreFrame) Frame {
     }
 
     return fr
+}
+
+func WriteFrame(fr Frame, w io.Writer) error {
+    enc := json.NewEncoder(w)
+    return enc.Encode(fr)
+}
+
+func ReadFrame(r io.Reader) (Frame, error) {
+    dec := json.NewDecoder(r)
+    fr := Frame{}
+    err := dec.Decode(&fr)
+    return fr, err
 }
 
 const CircleI int = 0
