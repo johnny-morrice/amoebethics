@@ -63,10 +63,10 @@ func TestExplodes(t *testing.T) {
 func explodeTest(t *testing.T, radius float64, center, inPos, outPos *mat64.Vector) {
     tor := Torus{10, 10}
     if !tor.Explodes(radius, center, inPos) {
-        t.Error("Erroneously exploded")
+        t.Error("Erroneously not exploded")
     }
 
     if tor.Explodes(radius, center, outPos) {
-        t.Error("Erroneously not exploded")
+        t.Error("Erroneously exploded")
     }
 }
