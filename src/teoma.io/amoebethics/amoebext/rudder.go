@@ -32,6 +32,11 @@ type Rudder struct {
     S float64
 }
 
+// Throttle behaves as Move but scales the speed
+func (r Rudder) Jolt(pos *mat64.Vector, scale float64) {
+    pos.AddScaledVec(pos, scale * r.S, r.D)
+}
+
 func (r Rudder) Move(pos *mat64.Vector) {
     pos.AddScaledVec(pos, r.S, r.D)
 }
@@ -49,5 +54,6 @@ func (r Rudder) Steer(theta float64) {
 }
 
 func (r Rudder) RandSteer() {
-    r.Steer(rand.Float64())
+    theta := rand.Float64() * m.Pi * 2
+    r.Steer(theta)
 }
