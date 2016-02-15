@@ -52,8 +52,8 @@ func (s *Sheeple) Deserialize(r io.Reader) error {
     return nil
 }
 
-func (sheeple *Sheeple) Interpolate(n *lib.SimNode, time float64) {
-
+func (sh *Sheeple) Interpolate(n *lib.SimNode, time float64) {
+    sh.Jolt(n.P, time)
 }
 
 type SheepleFactory struct {}

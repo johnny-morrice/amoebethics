@@ -37,7 +37,7 @@ func (tv *Tv) Deserialize(r io.Reader) error {
 }
 
 func (tv *Tv) Interpolate(n *lib.SimNode, time float64) {
-
+    // No movement
 }
 
 type TvFactory struct {}
