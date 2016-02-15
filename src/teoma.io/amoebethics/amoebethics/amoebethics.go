@@ -29,6 +29,6 @@ func main() {
 }
 
 func fatal(e error) {
-    fmt.Fprintf(os.Stderr, "Fatal: %v", e)
+    fmt.Fprintf(os.Stderr, "Fatal: %v\n", e)
     os.Exit(1)
 }
