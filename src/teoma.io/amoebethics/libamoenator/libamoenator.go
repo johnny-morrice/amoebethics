@@ -72,7 +72,26 @@ var turqouise Color = Color{G: ^uint8(0), B: ^uint8(0),}
 var __colors []Color
 
 func Init() {
-    __colors = []Color{red, green, blue, purple, yellow, turqouise,}
+    prime := []Color{red, green, blue, purple, yellow, turqouise,}
+    __colors = make([]Color, 2 * len(prime))
+    j := 0
+    for _, light := range prime {
+        dark := Color{}
+        dark.R = light.R / 2
+        dark.G = light.G / 2
+        dark.B = light.B / 2
+        prime[j] = light
+        prime[j + 1] = dark
+        j += 2
+    }
+}
+
+func belief2color(bid int, op core.Opinion) int {
+    offset := 0
+    if op == core.IsFalse {
+        offset = 1
+    }
+    return (bid * 2) + offset
 }
 
 type renderer struct {
@@ -86,9 +105,9 @@ func MakeRenderer(pkt core.SimPacket, yard core.EntityYard, framecnt uint) (rend
     r := renderer{}
     r.framecnt = framecnt
     r.pre.Palette = __colors
-    colcnt := len(r.pre.Palette)
-    if len(pkt.Beliefs) > colcnt {
-        return r, fmt.Errorf("Only supports", colcnt, "beliefs")
+    support := len(r.pre.Palette) / 2
+    if len(pkt.Beliefs) > support {
+        return r, fmt.Errorf("Only supports", support, "beliefs")
     }
     r.pre.Beliefs = pkt.Beliefs
     r.nodes = make([]*core.SimNode, len(pkt.Nodes))
@@ -196,7 +215,11 @@ func renderNode(node core.UserNode) ColorBox {
     box := ColorBox{}
     box.Colors = make([]int, len(node.Beliefs))
     for i, b := range node.Beliefs {
-        box.Colors[i] = b.Id
+        if op := b.Op; op == core.IsTrue || op == core.IsFalse {
+            box.Colors[i] = belief2color(b.Id, op)
+        } else {
+            panic("Unsupported opinion")
+        }
     }
     box.Radius = radius
     box.P = node.P
