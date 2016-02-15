@@ -4,3 +4,4 @@ pkg
 *.o
 src/github.com
 scratch
+data
