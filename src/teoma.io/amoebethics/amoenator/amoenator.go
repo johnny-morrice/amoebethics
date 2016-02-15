@@ -1,9 +1,12 @@
 package main
 
 import (
+    "bufio"
     "flag"
     "fmt"
     "os"
+    "strings"
+    "sync"
     core "teoma.io/amoebethics/libamoebethics"
     animate "teoma.io/amoebethics/libamoenator"
     ext "teoma.io/amoebethics/amoebext"
@@ -31,17 +34,23 @@ func main() {
 func runFrameTunnel(yard core.EntityYard, count uint) <-chan chan animate.Frame {
     outch := make(chan chan animate.Frame)
     go func() {
-        for {
-            pkt, perr := core.ReadSimPkt(os.Stdin)
+        hold := sync.WaitGroup{}
+        scanner := bufio.NewScanner(os.Stdin)
+        for scanner.Scan() {
+            r := strings.NewReader(scanner.Text())
+            pkt, perr := core.ReadSimPkt(r)
             if perr != nil {
-                close(outch)
-                break
+                fatal(perr)
             }
+            hold.Add(1)
             go func() {
                 frch := render(pkt, yard, count)
                 outch<- frch
+                hold.Done()
             }()
         }
+        hold.Wait()
+        close(outch)
     }()
     return outch
 }
