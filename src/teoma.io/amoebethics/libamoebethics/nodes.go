@@ -35,7 +35,7 @@ type MachineNode struct {
 type SimNode struct {
     MachineNode
     BaseNode
-    nextFrame *SimNode
+    changeBuffer *SimNode
 }
 
 type Entity interface {
@@ -46,19 +46,19 @@ type Entity interface {
     Deserialize(r io.Reader) error
 }
 
-func MakeNode(un *UserNode, base SimBase, yard EntityYard) (*SimNode, error) {
-    sn, err := makeNodePart(un, base, yard)
+func MakeNode(un *UserNode, id int, base SimBase, yard EntityYard) (*SimNode, error) {
+    sn, err := makeNodePart(un, id, base, yard)
 
     if err != nil {
         return nil, err
     }
 
-    sn.nextFrame, _ = makeNodePart(un, base, yard)
+    sn.changeBuffer, _ = makeNodePart(un, id, base, yard)
 
     return sn, nil
 }
 
-func makeNodePart(un *UserNode, base SimBase, yard EntityYard) (*SimNode, error) {
+func makeNodePart(un *UserNode, id int, base SimBase, yard EntityYard) (*SimNode, error) {
     sn := &SimNode{}
     ent, err := yard.MakeEntity(un, base)
     if err != nil {
@@ -68,7 +68,9 @@ func makeNodePart(un *UserNode, base SimBase, yard EntityYard) (*SimNode, error)
     sn.BaseNode = un.BaseNode
     sn.Neighbours = []*SimNode{}
     sn.Beliefs = MakeBeliefSet(base.Beliefs, un.Beliefs)
+    sn.Expression = MakeBeliefSet(base.Beliefs, un.Expression)
     sn.P = UserVec2BlasVec(un.P)
+    sn.Id = id
 
     return sn, nil
 }
@@ -98,14 +100,18 @@ func (n *SimNode) Interpolate(time float64) {
 }
 
 func (n *SimNode) Update(s *Sim) {
-    n.Entity.Handle(n.nextFrame, s)
+    n.Entity.Handle(n.changeBuffer, s)
 }
 
-func (n *SimNode) SwapFrames() {
-    cpy := *n
-    other := n.nextFrame
-    *n = *other
-    *other = cpy
+func (n *SimNode) WriteChange() {
+    n.BaseNode = n.changeBuffer.BaseNode
+    n.ClearNeighbours()
+    for _, m := range n.changeBuffer.Neighbours {
+        n.Neighbours = append(n.Neighbours, m)
+    }
+    n.P.CloneVec(n.changeBuffer.P)
+    n.Beliefs.Copy(n.changeBuffer.Beliefs)
+    n.Expression.Copy(n.changeBuffer.Expression)
 }
 
 func SimNode2UserNode(sn *SimNode) UserNode {
@@ -113,16 +119,19 @@ func SimNode2UserNode(sn *SimNode) UserNode {
     un.BaseNode = sn.BaseNode
     uneigh := make([]int, len(sn.Neighbours))
     un.Neighbours = uneigh
-    un.Extension = Node2String(sn)
+    un.Extension = Entity2String(sn.Entity)
     for i, m := range sn.Neighbours {
         uneigh[i] = m.Id
     }
+    un.Beliefs = sn.Beliefs.Slice()
+    un.Expression = sn.Beliefs.Slice()
+    un.P = BlasVec2UserVec(sn.P)
     return un
 }
 
-func Node2String(n *SimNode) string {
+func Entity2String(e Entity) string {
     buff := bytes.Buffer{}
-    err := n.Entity.Serialize(&buff)
+    err := e.Serialize(&buff)
     if err != nil {
         // Should never happen
         panic(err)

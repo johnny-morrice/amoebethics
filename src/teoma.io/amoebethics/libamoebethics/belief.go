@@ -45,7 +45,7 @@ func (bs BeliefSet) Slice() []Belief {
             b := Belief{}
             b.Id = i
             b.Op = opp
-            bels[i] = b
+            bels = append(bels, b)
         }
     }
     return bels
@@ -55,5 +55,12 @@ func (bs BeliefSet) Clear() {
     opps := ([]Opinion)(bs)
     for i := 0; i < len(opps); i++ {
         opps[i] = DontKnow
+    }
+}
+
+func (bs BeliefSet) Copy(from BeliefSet) {
+    to := ([]Opinion)(bs)
+    for i, op := range ([]Opinion)(from) {
+        to[i] = op
     }
 }

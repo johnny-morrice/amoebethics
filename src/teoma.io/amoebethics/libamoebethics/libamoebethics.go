@@ -44,7 +44,7 @@ func MakeSim(in SimPacket, yard EntityYard, outch chan<- SimPacket) (*Sim, error
     // We ignore input nodes neighbours
     nodes := make([]*SimNode, len(in.Nodes))
     for i, un := range in.Nodes {
-        n, err := MakeNode(&un, in.SimBase, yard)
+        n, err := MakeNode(&un, i, in.SimBase, yard)
         if err != nil {
             return nil, err
         }
@@ -53,6 +53,7 @@ func MakeSim(in SimPacket, yard EntityYard, outch chan<- SimPacket) (*Sim, error
     s := &Sim{}
     s.Nodes = nodes
     s.SimBase = in.SimBase
+    s.outch = outch
     return s, nil
 }
 
@@ -64,6 +65,7 @@ func (s *Sim) ForkSim() {
             s.step()
             s.outch<- s.moment()
         }
+        close(s.outch)
     }()
 }
 
@@ -100,7 +102,7 @@ func (s *Sim) nodeHandlers() {
         n.Update(s)
     })
     s.Each(func (n *SimNode) {
-        n.SwapFrames()
+        n.WriteChange()
     })
 }
 
@@ -115,10 +117,10 @@ func (s *Sim) Ceach(f func(n *SimNode)) {
     hold := sync.WaitGroup{}
     hold.Add(count)
     for _, n := range s.Nodes {
-        go func() {
-            f(n)
+        go func(node *SimNode) {
+            f(node)
             hold.Done()
-        }()
+        }(n)
     }
     hold.Wait()
 }
