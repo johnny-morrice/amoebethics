@@ -23,7 +23,7 @@ func main() {
     for out := range outch {
         werr := lib.WriteSimPkt(out, os.Stdout)
         if werr != nil {
-            fatal(werr)
+            break
         }
     }
 }
