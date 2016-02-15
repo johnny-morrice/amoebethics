@@ -97,7 +97,7 @@ func belief2color(bid int, op core.Opinion) int {
 type renderer struct {
     pre PreFrame
     framecnt uint
-    fr Frame
+    fr *Frame
     nodes []*core.SimNode
 }
 
@@ -127,7 +127,8 @@ func (r renderer) Render() []Frame {
     seqmax := float64(r.framecnt)
     slot := 1.0 / seqmax
     for i := uint(0); i < r.framecnt; i++ {
-        r.fr = MakeFrame(r.pre)
+        fr := MakeFrame(r.pre)
+        r.fr = &fr
         tstep := float64(i + 1)
         time := 1.0 / (seqmax * tstep)
         for _, entnodes := range entGroups {
@@ -135,7 +136,7 @@ func (r renderer) Render() []Frame {
             r.nodeComposite(time, uns, entnodes)
         }
         r.interpolate(slot)
-        out[i] = r.fr
+        out[i] = fr
     }
 
     return out
