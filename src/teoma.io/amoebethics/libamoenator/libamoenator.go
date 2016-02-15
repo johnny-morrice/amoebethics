@@ -71,7 +71,7 @@ var yellow Color = Color{R: ^uint8(0), G: ^uint8(0),}
 var turqouise Color = Color{G: ^uint8(0), B: ^uint8(0),}
 var __colors []Color
 
-func Init() {
+func init() {
     prime := []Color{red, green, blue, purple, yellow, turqouise,}
     __colors = make([]Color, 2 * len(prime))
     j := 0
@@ -80,8 +80,8 @@ func Init() {
         dark.R = light.R / 2
         dark.G = light.G / 2
         dark.B = light.B / 2
-        prime[j] = light
-        prime[j + 1] = dark
+        __colors[j] = light
+        __colors[j + 1] = dark
         j += 2
     }
 }
@@ -107,12 +107,12 @@ func MakeRenderer(pkt core.SimPacket, yard core.EntityYard, framecnt uint) (rend
     r.pre.Palette = __colors
     support := len(r.pre.Palette) / 2
     if len(pkt.Beliefs) > support {
-        return r, fmt.Errorf("Only supports", support, "beliefs")
+        return r, fmt.Errorf("Only supports %v beliefs", support)
     }
     r.pre.Beliefs = pkt.Beliefs
     r.nodes = make([]*core.SimNode, len(pkt.Nodes))
     for i, un := range pkt.Nodes {
-        n, err := core.MakeNode(&un, pkt.SimBase, yard)
+        n, err := core.MakeNode(&un, i, pkt.SimBase, yard)
         if err != nil {
             return r, err
         }
@@ -125,6 +125,7 @@ func (r renderer) Render() []Frame {
     out := make([]Frame, r.framecnt)
     entGroups := r.splitNodes()
     seqmax := float64(r.framecnt)
+    slot := 1.0 / seqmax
     for i := uint(0); i < r.framecnt; i++ {
         r.fr = MakeFrame(r.pre)
         tstep := float64(i + 1)
@@ -133,7 +134,7 @@ func (r renderer) Render() []Frame {
             uns := userNodes(entnodes)
             r.nodeComposite(time, uns, entnodes)
         }
-        r.interpolate(time)
+        r.interpolate(slot)
         out[i] = r.fr
     }
 
@@ -156,6 +157,7 @@ func (r renderer) splitNodes() [][]*core.SimNode {
     i := 0
     for _, slp := range split {
         out[i] = *slp
+        i++
     }
     return out
 }
