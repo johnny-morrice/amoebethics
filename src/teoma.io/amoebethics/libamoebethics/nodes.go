@@ -124,7 +124,7 @@ func SimNode2UserNode(sn *SimNode) UserNode {
         uneigh[i] = m.Id
     }
     un.Beliefs = sn.Beliefs.Slice()
-    un.Expression = sn.Beliefs.Slice()
+    un.Expression = sn.Expression.Slice()
     un.P = BlasVec2UserVec(sn.P)
     return un
 }

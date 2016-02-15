@@ -90,9 +90,11 @@ func (s *Sim) moment() SimPacket {
 
 func (s *Sim) attachNodes() {
     s.Ceach(func (n *SimNode) {
-        n.ClearNeighbours()
+        n.changeBuffer.ClearNeighbours()
+    })
+    s.Ceach(func (n *SimNode) {
         s.Each(func (m *SimNode) {
-            n.Handshake(m, s)
+            n.Handshake(m.changeBuffer, s)
         })
     })
 }
