@@ -5,7 +5,6 @@ import (
     "io"
     "encoding/json"
     core "teoma.io/amoebethics/libamoebethics"
-    ext "teoma.io/amoebethics/amoebext"
 )
 
 type PreFrame struct {
@@ -16,15 +15,15 @@ type PreFrame struct {
 type Frame struct {
     PreFrame
     Explosions []Explosion
-    Shapes [][]ColorBox
+    Shapes map[string][]ColorBox
 }
 
 func MakeFrame(pre PreFrame) Frame {
     fr := Frame{PreFrame: pre}
     fr.Explosions = []Explosion {}
-    fr.Shapes = [][]ColorBox {
-        []ColorBox {},
-        []ColorBox {},
+    fr.Shapes = map[string][]ColorBox {
+        "circle": []ColorBox {},
+        "square": []ColorBox {},
     }
 
     return fr
@@ -41,9 +40,6 @@ func ReadFrame(r io.Reader) (Frame, error) {
     err := dec.Decode(&fr)
     return fr, err
 }
-
-const CircleI int = 0
-const SquareI int = 1
 
 type Explosion struct {
     Radius float64
@@ -69,19 +65,19 @@ var blue Color = Color{B: ^uint8(0),}
 var purple Color = Color{R: ^uint8(0), B: ^uint8(0),}
 var yellow Color = Color{R: ^uint8(0), G: ^uint8(0),}
 var turqouise Color = Color{G: ^uint8(0), B: ^uint8(0),}
-var __colors []Color
+var __defaultpalette []Color
 
 func init() {
     prime := []Color{red, green, blue, purple, yellow, turqouise,}
-    __colors = make([]Color, 2 * len(prime))
+    __defaultpalette = make([]Color, 2 * len(prime))
     j := 0
     for _, light := range prime {
         dark := Color{}
         dark.R = light.R / 2
         dark.G = light.G / 2
         dark.B = light.B / 2
-        __colors[j] = light
-        __colors[j + 1] = dark
+        __defaultpalette[j] = light
+        __defaultpalette[j + 1] = dark
         j += 2
     }
 }
@@ -94,151 +90,77 @@ func belief2color(bid int, op core.Opinion) int {
     return (bid * 2) + offset
 }
 
-type renderer struct {
+type Renderer struct {
     pre PreFrame
     framecnt uint
     fr *Frame
     nodes []*core.SimNode
+    slot float64
+    time float64
+    entshapes map[string]string
+    entgrps map[string]EntGroupFact
+    pkt core.SimPacket
 }
 
-func MakeRenderer(pkt core.SimPacket, yard core.EntityYard, framecnt uint) (renderer, error) {
-    r := renderer{}
-    r.framecnt = framecnt
-    r.pre.Palette = __colors
-    support := len(r.pre.Palette) / 2
+type RenderFactory struct {
+    Yard core.EntityYard
+    Framecnt uint
+    EntShapes map[string]string
+    EntGroups map[string]EntGroupFact
+}
+
+func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, error) {
+    r := Renderer{}
+
+    if palette == nil {
+        palette = __defaultpalette
+    }
+
+    support := len(palette) / 2
     if len(pkt.Beliefs) > support {
         return r, fmt.Errorf("Only supports %v beliefs", support)
     }
+
+    r.pre.Palette = palette
+    r.pkt = pkt
     r.pre.Beliefs = pkt.Beliefs
-    r.nodes = make([]*core.SimNode, len(pkt.Nodes))
-    for i, un := range pkt.Nodes {
-        n, err := core.MakeNode(&un, i, pkt.SimBase, yard)
+    seqmax := float64(fact.Framecnt)
+    r.slot = 1.0 / seqmax
+    r.framecnt = fact.Framecnt
+    r.entshapes = fact.EntShapes
+    r.entgrps = fact.EntGroups
+
+    r.nodes = make([]*core.SimNode, len(r.pkt.Nodes))
+    for i, un := range r.pkt.Nodes {
+        n, err := core.MakeNode(&un, i, r.pkt.SimBase, fact.Yard)
         if err != nil {
             return r, err
         }
         r.nodes[i] = n
     }
+
     return r, nil
 }
 
-func (r renderer) Render() []Frame {
+func (r *Renderer) Render() []Frame {
     out := make([]Frame, r.framecnt)
-    entGroups := r.splitNodes()
-    seqmax := float64(r.framecnt)
-    slot := 1.0 / seqmax
+    entGroups := r.nodeGroups()
     for i := uint(0); i < r.framecnt; i++ {
         fr := MakeFrame(r.pre)
         r.fr = &fr
-        tstep := float64(i + 1)
-        time := 1.0 / (seqmax * tstep)
-        for _, entnodes := range entGroups {
-            uns := userNodes(entnodes)
-            r.nodeComposite(time, uns, entnodes)
+        for _, group := range entGroups {
+            group.Render()
         }
-        r.interpolate(slot)
+        r.interpolate()
         out[i] = fr
+        r.time += r.slot
     }
 
     return out
 }
 
-func (r renderer) splitNodes() [][]*core.SimNode {
-    split := make(map[string]*[]*core.SimNode) // At least we return a nicer type
-    for _, sn := range r.nodes {
-        target, ok := split[sn.Name]
-        if ok {
-            *target = append(*target, sn)
-        } else {
-            target = new([]*core.SimNode)
-            *target = []*core.SimNode { sn, }
-            split[sn.Name] = target
-        }
-    }
-    out := make([][]*core.SimNode, len(split))
-    i := 0
-    for _, slp := range split {
-        out[i] = *slp
-        i++
-    }
-    return out
-}
-
-func (r renderer) interpolate(time float64) {
+func (r *Renderer) interpolate() {
     for _, n := range r.nodes {
-        n.Interpolate(time)
+        n.Interpolate(r.slot)
     }
-}
-
-func (r renderer) nodeComposite(time float64, user []core.UserNode, nodes []*core.SimNode) {
-    const shpTypeCnt = 2
-    name := user[0].Name
-    switch name {
-    case "sheeple":
-        r.renderSheeple(user)
-    case "tv":
-        r.renderTv(time, user, nodes)
-    default:
-        panic("Unknown node type: " + name)
-    }
-}
-
-func (r renderer) renderSheeple(user []core.UserNode) {
-    circles := make([]ColorBox, len(user))
-    for i, un := range user {
-        circles[i] = renderNode(un)
-    }
-    r.fr.Shapes[CircleI] = append(r.fr.Shapes[CircleI], circles...)
-}
-
-func (r renderer) renderTv(time float64, user []core.UserNode, sim []*core.SimNode) {
-    squares := make([]ColorBox, len(user))
-    for i, un := range user {
-        squares[i] = renderNode(un)
-        e := sim[i].Entity
-        tv := e.(*ext.Tv) // A better deserialization mechanism would allow no typecast
-        expls := make([]Explosion, len(un.Expression))
-        for i, b := range un.Expression {
-            expls[i] = renderExplosion(tv.R, time, b)
-        }
-        r.fr.Explosions = append(r.fr.Explosions, expls...)
-    }
-    r.fr.Shapes[SquareI] = append(r.fr.Shapes[SquareI], squares...)
-}
-
-func userNodes(nodes []*core.SimNode) []core.UserNode {
-    out := make([]core.UserNode, len(nodes))
-    for i, n := range nodes {
-        out[i] = core.SimNode2UserNode(n)
-    }
-    return out
-}
-
-func renderNode(node core.UserNode) ColorBox {
-    const radius float64 = 0.05
-    box := ColorBox{}
-    box.Colors = make([]int, len(node.Beliefs))
-    for i, b := range node.Beliefs {
-        if op := b.Op; op == core.IsTrue || op == core.IsFalse {
-            box.Colors[i] = belief2color(b.Id, op)
-        } else {
-            panic("Unsupported opinion")
-        }
-    }
-    box.Radius = radius
-    box.P = node.P
-    return box
-}
-
-func renderExplosion(radius, time float64, b core.Belief) Explosion {
-    const max = ^uint32(0)
-    const fmax = float64(max)
-    ex := Explosion{}
-    ex.Radius = radius * (time * 2)
-    if time < 0.5 {
-        ex.Intensity = max
-    } else {
-        ex.Intensity = uint32(fmax - ((time - 0.5) * 2))
-    }
-    ex.Color = b.Id
-    return ex
 }

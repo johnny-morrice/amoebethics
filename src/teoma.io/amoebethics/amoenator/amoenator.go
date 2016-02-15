@@ -13,25 +13,32 @@ import (
 )
 
 func main() {
-    yard := ext.StdExtensions()
-
     count := uint(30)
     flag.UintVar(&count, "framecnt", 30, "Frames generated per simulation packet")
     flag.Parse()
 
-    frtun := runFrameTunnel(yard, count)
+    yard := ext.StdExtensions()
+    shapes := animate.StdShapes
+    groups := animate.StdGroupFacts
+
+    fact := animate.RenderFactory{}
+    fact.Yard = yard
+    fact.Framecnt = count
+    fact.EntShapes = shapes
+    fact.EntGroups = groups
+    frtun := runFrameTunnel(fact)
 
     for frch := range frtun {
         for fr := range frch {
             werr := animate.WriteFrame(fr, os.Stdout)
             if werr != nil {
-                fatal(werr)
+                break
             }
         }
     }
 }
 
-func runFrameTunnel(yard core.EntityYard, count uint) <-chan chan animate.Frame {
+func runFrameTunnel(fact animate.RenderFactory) <-chan chan animate.Frame {
     outch := make(chan chan animate.Frame)
     go func() {
         hold := sync.WaitGroup{}
@@ -44,7 +51,7 @@ func runFrameTunnel(yard core.EntityYard, count uint) <-chan chan animate.Frame 
             }
             hold.Add(1)
             go func() {
-                frch := render(pkt, yard, count)
+                frch := render(fact, pkt)
                 outch<- frch
                 hold.Done()
             }()
@@ -55,12 +62,14 @@ func runFrameTunnel(yard core.EntityYard, count uint) <-chan chan animate.Frame 
     return outch
 }
 
-func render(pkt core.SimPacket, yard core.EntityYard, count uint) chan animate.Frame {
+func render(fact animate.RenderFactory, pkt core.SimPacket) chan animate.Frame {
     frch := make(chan animate.Frame)
-    rend, rerr := animate.MakeRenderer(pkt, yard, count)
+
+    rend, rerr := fact.Build(pkt, nil)
     if rerr != nil {
         fatal(rerr)
     }
+
     go func() {
         for _, fr := range rend.Render() {
             frch<- fr
