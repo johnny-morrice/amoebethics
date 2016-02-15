@@ -16,7 +16,7 @@ func (tv *Tv) Handle(n *lib.SimNode, s *lib.Sim) {
     n.Expression.Clear()
     if tv.Speaking() {
         b := n.Beliefs.Rand()
-        n.Expression.HoldIrratBelief(b)
+        n.Expression.HoldBelief(b)
     }
 }
 

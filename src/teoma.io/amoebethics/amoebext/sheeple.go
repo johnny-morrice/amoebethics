@@ -16,15 +16,15 @@ type Sheeple struct {
 
 var _ lib.Entity = (*Sheeple)(nil)
 
-// Move in a random direction
 func (sheep *Sheeple) Handle(n *lib.SimNode, s *lib.Sim) {
-    // Believe everything said
+    // Change belief to whatever said
     for _, m := range n.Neighbours {
         for _, b := range m.Expression.Slice() {
-            n.Beliefs.HoldIrratBelief(b)
+            n.Beliefs.HoldBelief(b)
         }
     }
 
+    // Move in random direction
     sheep.RandSteer()
     sheep.Move(n.P)
     s.Torus.Map(n.P)

@@ -5,7 +5,7 @@ import (
 )
 
 type Belief struct {
-    Opp Opinion
+    Op Opinion
     Name string
     Id int
 }
@@ -16,7 +16,6 @@ const (
     DontKnow = Opinion(iota)
     IsFalse
     IsTrue
-    IsBoth
 )
 
 type BeliefSet []Opinion
@@ -24,48 +23,28 @@ type BeliefSet []Opinion
 func MakeBeliefSet(bels []string, held []Belief) BeliefSet {
     sl := make([]Opinion, len(bels))
     for _, b := range held {
-        sl[b.Id] = b.Opp
+        sl[b.Id] = b.Op
     }
     return BeliefSet(sl)
 }
 
-func (bs BeliefSet) HoldIrratBelief(b Belief) {
-    old := bs[b.Id]
-    switch old {
-    case DontKnow:
-        bs[b.Id] = b.Opp
-    case IsTrue:
-        if b.Opp == IsFalse {
-            bs[b.Id] = IsBoth
-        }
-    case IsFalse:
-        if b.Opp == IsTrue {
-            bs[b.Id] = IsBoth
-        }
-    }
+func (bs BeliefSet) HoldBelief(b Belief) {
+    bs[b.Id] = b.Op
 }
 
 func (bs BeliefSet) Rand() Belief {
-    cands := make([]Belief, 0)
-    for i, opp := range ([]Opinion)(bs) {
-        if opp != DontKnow {
-            b := Belief{}
-            b.Id = i
-            b.Opp = opp
-            cands = append(cands, b)
-        }
-    }
+    cands := bs.Slice()
     r := rand.Intn(len(cands))
     return cands[r]
 }
 
 func (bs BeliefSet) Slice() []Belief {
-    bels := make([]Belief, len(bs))
+    bels := make([]Belief, 0, len(bs))
     for i, opp := range ([]Opinion)(bs) {
         if opp != DontKnow {
             b := Belief{}
             b.Id = i
-            b.Opp = opp
+            b.Op = opp
             bels[i] = b
         }
     }
