@@ -3,5 +3,6 @@ pkg
 *.a
 *.o
 src/github.com
+src/golang.org
 scratch
 data
