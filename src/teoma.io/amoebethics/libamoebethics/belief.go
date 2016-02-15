@@ -10,7 +10,7 @@ type Belief struct {
     Id int
 }
 
-type Opinion uint8
+type Opinion int
 
 const (
     DontKnow = Opinion(iota)
