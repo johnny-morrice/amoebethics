@@ -7,9 +7,9 @@ import (
     "os"
     "strings"
     "sync"
-    core "teoma.io/amoebethics/libamoebethics"
-    animate "teoma.io/amoebethics/libamoenator"
-    ext "teoma.io/amoebethics/amoebext"
+    core "github.com/johnny-morrice/amoebethics/libamoebethics"
+    animate "github.com/johnny-morrice/amoebethics/libamoenator"
+    ext "github.com/johnny-morrice/amoebethics/amoebext"
 )
 
 func main() {

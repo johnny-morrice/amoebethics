@@ -2,7 +2,7 @@ package amoebext
 
 import (
     "strings"
-    lib "teoma.io/amoebethics/libamoebethics"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
 )
 
 func decodeEntity(e lib.Entity, un *lib.UserNode) error {

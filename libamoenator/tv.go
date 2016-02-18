@@ -1,7 +1,7 @@
 package libamoenator
 
 import (
-    ext "teoma.io/amoebethics/amoebext"
+    ext "github.com/johnny-morrice/amoebethics/amoebext"
 )
 
 type TvGroup BaseExtension

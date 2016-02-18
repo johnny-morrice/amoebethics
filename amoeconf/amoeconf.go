@@ -6,8 +6,8 @@ import (
     "os"
     "strings"
 
-    lib "teoma.io/amoebethics/libamoebethics"
-    ext "teoma.io/amoebethics/amoebext"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
+    ext "github.com/johnny-morrice/amoebethics/amoebext"
 )
 
 type args struct {

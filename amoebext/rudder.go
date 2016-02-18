@@ -4,7 +4,7 @@ import (
     m "math"
     "math/rand"
     "github.com/gonum/matrix/mat64"
-    lib "teoma.io/amoebethics/libamoebethics"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
 
 )
 

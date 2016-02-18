@@ -1,7 +1,7 @@
 package amoebext
 
 import (
-    lib "teoma.io/amoebethics/libamoebethics"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
 )
 
 func StdExtensions() lib.EntityYard {
