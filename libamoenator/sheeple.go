@@ -4,9 +4,9 @@ type SheepleGroup BaseExtension
 
 var _ EntGroup = SheepleGroup{}
 
-var MakeSheepleGroup = EntGroupFact(func (base BaseExtension) EntGroup {
+func MakeSheepleGroup(base BaseExtension) EntGroup {
     return SheepleGroup(base)
-})
+}
 
 func (gr SheepleGroup) Render() {
     BaseExtension(gr).DefaultRender("sheeple")

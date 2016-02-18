@@ -8,9 +8,9 @@ type TvGroup BaseExtension
 
 var _ EntGroup = TvGroup{}
 
-var MakeTvGroup = EntGroupFact(func (base BaseExtension) EntGroup {
+func MakeTvGroup(base BaseExtension) EntGroup {
     return TvGroup(base)
-})
+}
 
 func (gr TvGroup) Render() {
     boxes := make([]ColorBox, len(gr.user))
