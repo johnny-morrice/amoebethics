@@ -10,6 +10,7 @@ import (
 type PreFrame struct {
     Beliefs []string
     Palette []Color
+    Torus core.Torus
 }
 
 type Frame struct {
@@ -124,6 +125,7 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
     r.pre.Palette = palette
     r.pkt = pkt
     r.pre.Beliefs = pkt.Beliefs
+    r.pre.Torus = pkt.Torus
     seqmax := float64(fact.Framecnt)
     r.slot = 1.0 / seqmax
     r.framecnt = fact.Framecnt
