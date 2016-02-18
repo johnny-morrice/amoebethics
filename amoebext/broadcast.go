@@ -2,7 +2,7 @@ package amoebext
 
 import (
     "math/rand"
-    lib "teoma.io/amoebethics/libamoebethics"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
 )
 
 type Speaker struct {

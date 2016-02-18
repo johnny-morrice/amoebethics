@@ -4,7 +4,7 @@ import (
     "fmt"
     "io"
     "encoding/json"
-    core "teoma.io/amoebethics/libamoebethics"
+    core "github.com/johnny-morrice/amoebethics/libamoebethics"
 )
 
 type PreFrame struct {

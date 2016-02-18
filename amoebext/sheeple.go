@@ -3,7 +3,7 @@ package amoebext
 import (
     "encoding/json"
     "io"
-    lib "teoma.io/amoebethics/libamoebethics"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
 )
 
 type UserSheeple struct {

@@ -3,8 +3,8 @@ package main
 import (
     "fmt"
     "os"
-    lib "teoma.io/amoebethics/libamoebethics"
-    ext "teoma.io/amoebethics/amoebext"
+    lib "github.com/johnny-morrice/amoebethics/libamoebethics"
+    ext "github.com/johnny-morrice/amoebethics/amoebext"
 )
 
 func main() {
