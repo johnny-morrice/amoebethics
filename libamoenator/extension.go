@@ -45,7 +45,7 @@ func (r *Renderer) nodeGroups() []EntGroup {
 func (r *Renderer) userNodes(nodes []*core.SimNode) []core.UserNode {
     out := make([]core.UserNode, len(nodes))
     for i, n := range nodes {
-        out[i] = r.pkt.Nodes[n.Id]
+        out[i] = core.SimNode2UserNode(n)
     }
     return out
 }
