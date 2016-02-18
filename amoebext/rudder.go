@@ -38,7 +38,7 @@ func (r Rudder) Jolt(pos *mat64.Vector, scale float64) {
 }
 
 func (r Rudder) Move(pos *mat64.Vector) {
-    pos.AddScaledVec(pos, r.S, r.D)
+    r.Jolt(pos, 1.0)
 }
 
 func (r Rudder) Steer(theta float64) {
