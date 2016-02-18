@@ -8,9 +8,8 @@ import (
 )
 
 type PreFrame struct {
-    Beliefs []string
+    core.SimBase
     Palette []Color
-    Torus core.Torus
 }
 
 type Frame struct {
@@ -122,10 +121,9 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
         return r, fmt.Errorf("Only supports %v beliefs", support)
     }
 
+    r.pre.SimBase = pkt.SimBase
     r.pre.Palette = palette
     r.pkt = pkt
-    r.pre.Beliefs = pkt.Beliefs
-    r.pre.Torus = pkt.Torus
     seqmax := float64(fact.Framecnt)
     r.slot = 1.0 / seqmax
     r.framecnt = fact.Framecnt
@@ -146,8 +144,8 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
 
 func (r *Renderer) Render() []Frame {
     out := make([]Frame, r.framecnt)
-    entGroups := r.nodeGroups()
     for i := uint(0); i < r.framecnt; i++ {
+        entGroups := r.nodeGroups()
         fr := MakeFrame(r.pre)
         r.fr = &fr
         for _, group := range entGroups {
