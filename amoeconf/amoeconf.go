@@ -2,7 +2,6 @@ package main
 
 import (
     "flag"
-    "math/rand"
     "os"
     "strings"
 
@@ -42,57 +41,20 @@ func main() {
     pkt.Beliefs = strings.Split(params.beliefs, ",")
     pkt.Nodes = make([]lib.UserNode, nodecnt)
 
-    for i := uint(0); i < nodecnt; i++ {
-        pkt.Nodes[i] = randNode(pkt.Torus)
-    }
-
     for i := uint(0); i < params.tvcnt; i++ {
-        n := &pkt.Nodes[i]
-        n.Name = "tv"
-        n.Extension = lib.Entity2String(randTv())
+        n := ext.NewTvNode(pkt.Torus)
+        pkt.Nodes[i] = lib.SimNode2UserNode(n)
     }
 
-    for i := params.tvcnt; i < nodecnt; i++ {
-        n := &pkt.Nodes[i]
-        n.Name = "sheeple"
-        n.Extension = lib.Entity2String(randSheeple())
+    shmax := params.tvcnt + params.sheeplecnt
+    for i := params.tvcnt; i < shmax; i++ {
+        n := ext.NewSheepleNode(pkt.Torus)
+        pkt.Nodes[i] = lib.SimNode2UserNode(n)
+    }
+
+    for i, n := range pkt.Nodes {
+        n.Id = i
     }
 
     lib.WriteSimPkt(pkt, os.Stdout)
-}
-
-func randNode(t lib.Torus) lib.UserNode {
-    un := lib.UserNode{}
-    un.Neighbours = []int {}
-    un.P = randPlace(t)
-    un.Beliefs = []lib.Belief {}
-    un.Expression = []lib.Belief {}
-    return un
-}
-
-func randTv() *ext.Tv {
-    tv := &ext.Tv{}
-    tv.R = 3
-    tv.InvF = 3
-    return tv
-}
-
-func randSheeple() *ext.Sheeple {
-    sh := &ext.Sheeple{}
-    sh.D = lib.Vec2(1.0, 0)
-    sh.S = 1.0
-    sh.RandSteer()
-    return sh
-}
-
-func randPlace(t lib.Torus) lib.UserVec {
-    x := tmap(rand.Float64(), t.W)
-    y := tmap(rand.Float64(), t.H)
-    return lib.UserVec{x, y}
-}
-
-func tmap(f float64, dim float64) float64 {
-    scale := f * dim
-    trans := scale - (dim / 2.0)
-    return trans
 }
