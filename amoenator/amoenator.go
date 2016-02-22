@@ -32,7 +32,7 @@ func main() {
         for fr := range frch {
             werr := animate.WriteFrame(fr, os.Stdout)
             if werr != nil {
-                break
+                fmt.Fprintf(os.Stderr, "Warning: %v", werr)
             }
         }
     }
@@ -50,9 +50,10 @@ func runFrameTunnel(fact animate.RenderFactory) <-chan chan animate.Frame {
                 fatal(perr)
             }
             hold.Add(1)
+            frch := make(chan animate.Frame)
+            outch<- frch
             go func() {
-                frch := render(fact, pkt)
-                outch<- frch
+                render(frch, fact, pkt)
                 hold.Done()
             }()
         }
@@ -62,9 +63,7 @@ func runFrameTunnel(fact animate.RenderFactory) <-chan chan animate.Frame {
     return outch
 }
 
-func render(fact animate.RenderFactory, pkt core.SimPacket) chan animate.Frame {
-    frch := make(chan animate.Frame)
-
+func render(frch chan<- animate.Frame, fact animate.RenderFactory, pkt core.SimPacket) {
     rend, rerr := fact.Build(pkt, nil)
     if rerr != nil {
         fatal(rerr)
@@ -76,8 +75,6 @@ func render(fact animate.RenderFactory, pkt core.SimPacket) chan animate.Frame {
         }
         close(frch)
     }()
-
-    return frch
 }
 
 func fatal(e error) {
