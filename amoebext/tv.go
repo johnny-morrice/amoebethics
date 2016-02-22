@@ -12,6 +12,17 @@ type Tv struct {
 
 var _ lib.Entity = (*Tv)(nil)
 
+func NewTvNode(t lib.Torus) *lib.SimNode {
+    tv := &Tv{}
+    tv.R = 3
+    tv.InvF = 3
+    n := lib.EmptyNode()
+    n.Entity = tv
+    n.Name = "tv"
+    n.P = randPlace(t)
+    return n
+}
+
 func (tv *Tv) Handle(n *lib.SimNode, s *lib.Sim) {
     n.Expression.Clear()
     if tv.Speaking() {
