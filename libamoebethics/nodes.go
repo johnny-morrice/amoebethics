@@ -75,6 +75,13 @@ func makeNodePart(un *UserNode, id int, base SimBase, yard EntityYard) (*SimNode
     return sn, nil
 }
 
+func EmptyNode() *SimNode {
+    sn := &SimNode{}
+    sn.Neighbours = []*SimNode{}
+    sn.P = Vec2(0, 0)
+    return sn
+}
+
 func (n *SimNode) ClearNeighbours() {
     cnt := len(n.Neighbours)
     // Clear to allow garbage collection of pointers, if any
