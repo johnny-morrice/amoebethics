@@ -13,6 +13,7 @@ type PreFrame struct {
 }
 
 type Frame struct {
+    FrameNum uint
     PreFrame
     Explosions []Explosion
     Shapes map[string][]ColorBox
@@ -44,7 +45,7 @@ func ReadFrame(r io.Reader) (Frame, error) {
 type Explosion struct {
     Radius float64
     Color int
-    Intensity uint32
+    Intensity uint8
 }
 
 type ColorBox struct {
@@ -145,13 +146,14 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
 func (r *Renderer) Render() []Frame {
     out := make([]Frame, r.framecnt)
     for i := uint(0); i < r.framecnt; i++ {
+        r.interpolate()
         entGroups := r.nodeGroups()
         fr := MakeFrame(r.pre)
+        fr.FrameNum = i
         r.fr = &fr
         for _, group := range entGroups {
             group.Render()
         }
-        r.interpolate()
         out[i] = fr
         r.time += r.slot
     }
@@ -161,6 +163,6 @@ func (r *Renderer) Render() []Frame {
 
 func (r *Renderer) interpolate() {
     for _, n := range r.nodes {
-        n.Interpolate(r.slot)
+        n.Interpolate(r.time)
     }
 }
