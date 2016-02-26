@@ -124,7 +124,12 @@ func compile(params args, frdat string, fnum int) {
 
     defer file.Close()
 
-    png.Encode(file, img)
+    encerr := png.Encode(file, img)
+
+    if encerr != nil {
+        fmt.Fprintf(os.Stderr,
+            "Error encoding PNG: %v", encerr)
+    }
 }
 
 func render(fr ani.Frame, fnum int, params args) image.Image {
@@ -146,6 +151,8 @@ func render(fr ani.Frame, fnum int, params args) image.Image {
         plts = append(plts, plotShape(sh, fr))
     }
 
+    plts = append(plts, plotExplode(fr))
+
     gc := dimg.NewGraphicContext(dest)
 
     gc.SetStrokeColor(black)
@@ -164,6 +171,36 @@ type plot interface {
     draw(gc d2d.GraphicContext)
 }
 
+type exploder struct {
+    bombs []ani.Explosion
+    palette []ani.Color
+}
+
+var _ plot = exploder{}
+
+func plotExplode(fr ani.Frame) exploder {
+    ex := exploder{}
+    ex.bombs = fr.Explosions
+    ex.palette = fr.Palette
+    return ex
+}
+
+func (ex exploder) draw(gc d2d.GraphicContext) {
+    for _, b := range ex.bombs {
+        c := ex.palette[b.Color]
+        alpha := b.Intensity / 2
+        trans := color.RGBA{c.R, c.G, c.B, alpha}
+        gc.SetStrokeColor(trans)
+        gc.SetFillColor(trans)
+
+        lineCircle(gc, b.P.X, b.P.Y, b.Radius)
+
+        fmt.Printf("Color was %v: %v\n", b.Color, trans)
+        gc.Close()
+        gc.Fill()
+    }
+}
+
 type boxplot struct {
     boxes []ani.ColorBox
     palette []ani.Color
@@ -178,26 +215,28 @@ var black = color.RGBA{0, 0, 0, 0xff}
 var white = color.RGBA{0xff, 0xff, 0xff, 0xff}
 var clear = color.RGBA{0, 0, 0, 0}
 
-func (c circleplot) draw(gc d2d.GraphicContext) {
+func lineCircle(gc d2d.GraphicContext, cx, cy, r float64) {
     const blowup = 100.0
+    step := 1.0 / (r * blowup)
+
+    gc.MoveTo(cx + r, cy)
+
+    max := math.Pi * 2
+    for t := 0.0; t < max; t += step {
+        x := cx + (math.Cos(t) * r)
+        y := cy + (math.Sin(t) * r)
+        gc.LineTo(x, y)
+    }
+}
+
+func (c circleplot) draw(gc d2d.GraphicContext) {
     for _, cb := range c.boxes {
         gc.SetStrokeColor(black)
         gc.SetFillColor(clear)
         gc.SetLineWidth(1.0)
 
-        r := cb.Radius
-        step := 1.0 / (r * blowup)
-        cx := cb.P.X
-        cy := cb.P.Y
+        lineCircle(gc, cb.P.X, cb.P.Y, cb.Radius)
 
-        gc.MoveTo(cx + r, cy)
-
-        max := math.Pi * 2
-        for t := 0.0; t < max; t += step {
-            x := cx + (math.Cos(t) * r)
-            y := cy + (math.Sin(t) * r)
-            gc.LineTo(x, y)
-        }
         gc.Close()
         gc.FillStroke()
 
@@ -210,7 +249,23 @@ type squareplot struct {
 var _ plot = squareplot{}
 
 func (c squareplot) draw(gc d2d.GraphicContext) {
+    for _, cb := range c.boxes {
+        gc.SetStrokeColor(black)
+        gc.SetFillColor(clear)
+        gc.SetLineWidth(1.0)
 
+        side := cb.Radius / 2.0
+        xmin, ymin := cb.P.X - side, cb.P.Y - side
+        xmax, ymax := cb.P.X + side, cb.P.Y + side
+
+        gc.MoveTo(xmin, ymin)
+        gc.LineTo(xmin, ymax)
+        gc.LineTo(xmax, ymax)
+        gc.LineTo(xmax, ymin)
+        gc.LineTo(xmin, ymin)
+        gc.Close()
+        gc.FillStroke()
+    }
 }
 
 func plotShape(sh string, fr ani.Frame) plot {
