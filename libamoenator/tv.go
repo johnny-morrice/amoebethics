@@ -21,7 +21,7 @@ func (gr TvGroup) Render() {
         tv := e.(*ext.Tv) // A better deserialization mechanism would allow no typecast
         expls := make([]Explosion, len(un.Expression))
         for i, b := range un.Expression {
-            expls[i] = renderExplosion(tv.R, gr.render.time, b)
+            expls[i] = renderExplosion(un.P, tv.R, gr.render.time, b)
         }
         fr.Explosions = append(fr.Explosions, expls...)
     }

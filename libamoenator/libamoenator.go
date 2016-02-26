@@ -46,6 +46,7 @@ type Explosion struct {
     Radius float64
     Color int
     Intensity uint8
+    P core.UserVec
 }
 
 type ColorBox struct {

@@ -76,7 +76,7 @@ func renderNode(node core.UserNode) ColorBox {
     return box
 }
 
-func renderExplosion(radius, time float64, b core.Belief) Explosion {
+func renderExplosion(p core.UserVec, radius, time float64, b core.Belief) Explosion {
     const max = ^uint8(0)
     const fmax = float64(max)
     ex := Explosion{}
@@ -87,5 +87,6 @@ func renderExplosion(radius, time float64, b core.Belief) Explosion {
         ex.Intensity = uint8(fmax - ((time - 0.5) * 2))
     }
     ex.Color = b.Id
+    ex.P = p
     return ex
 }
