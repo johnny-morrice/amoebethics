@@ -6,7 +6,6 @@ import (
     "fmt"
     "os"
     "strings"
-    "sync"
     core "github.com/johnny-morrice/amoebethics/libamoebethics"
     animate "github.com/johnny-morrice/amoebethics/libamoenator"
     ext "github.com/johnny-morrice/amoebethics/amoebext"
@@ -41,7 +40,6 @@ func main() {
 func runFrameTunnel(fact animate.RenderFactory) <-chan chan animate.Frame {
     outch := make(chan chan animate.Frame)
     go func() {
-        hold := sync.WaitGroup{}
         scanner := bufio.NewScanner(os.Stdin)
         for scanner.Scan() {
             r := strings.NewReader(scanner.Text())
@@ -49,15 +47,12 @@ func runFrameTunnel(fact animate.RenderFactory) <-chan chan animate.Frame {
             if perr != nil {
                 fatal(perr)
             }
-            hold.Add(1)
             frch := make(chan animate.Frame)
-            outch<- frch
             go func() {
                 render(frch, fact, pkt)
-                hold.Done()
             }()
+            outch<- frch
         }
-        hold.Wait()
         close(outch)
     }()
     return outch
