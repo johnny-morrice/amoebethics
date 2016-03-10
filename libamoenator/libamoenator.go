@@ -9,7 +9,13 @@ import (
 
 type PreFrame struct {
     core.SimBase
-    Palette []Color
+    Colors Palette
+}
+
+type Palette []Color
+
+func (p Palette) Get(i Coldex) Color {
+    return p[i]
 }
 
 type Frame struct {
@@ -44,14 +50,14 @@ func ReadFrame(r io.Reader) (Frame, error) {
 
 type Explosion struct {
     Radius float64
-    Color int
+    Color Coldex
     Intensity uint8
     P core.UserVec
 }
 
 type ColorBox struct {
     Radius float64
-    Colors []int
+    Colors []Coldex
     P core.UserVec
 }
 
@@ -60,6 +66,8 @@ type Color struct {
     G uint8
     B uint8
 }
+
+type Coldex int
 
 var red Color = Color{R: ^uint8(0),}
 var green Color = Color{G: ^uint8(0),}
@@ -84,12 +92,12 @@ func init() {
     }
 }
 
-func belief2color(bid int, op core.Opinion) int {
+func belief2color(b core.Belief) Coldex {
     offset := 0
-    if op == core.IsFalse {
+    if b.Op == core.IsFalse {
         offset = 1
     }
-    return (bid * 2) + offset
+    return Coldex((b.Id * 2) + offset)
 }
 
 type Renderer struct {
@@ -124,7 +132,7 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
     }
 
     r.pre.SimBase = pkt.SimBase
-    r.pre.Palette = palette
+    r.pre.Colors = palette
     r.pkt = pkt
     seqmax := float64(fact.Framecnt)
     r.slot = 1.0 / seqmax

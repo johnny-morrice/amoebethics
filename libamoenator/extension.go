@@ -63,10 +63,10 @@ func (base BaseExtension) DefaultRender(entity string) {
 func renderNode(node core.UserNode) ColorBox {
     const radius float64 = 0.05
     box := ColorBox{}
-    box.Colors = make([]int, len(node.Beliefs))
+    box.Colors = make([]Coldex, len(node.Beliefs))
     for i, b := range node.Beliefs {
         if op := b.Op; op == core.IsTrue || op == core.IsFalse {
-            box.Colors[i] = belief2color(b.Id, op)
+            box.Colors[i] = belief2color(b)
         } else {
             panic("Unsupported opinion")
         }
@@ -86,7 +86,7 @@ func renderExplosion(p core.UserVec, radius, time float64, b core.Belief) Explos
     } else {
         ex.Intensity = uint8(fmax - ((time - 0.5) * 2))
     }
-    ex.Color = b.Id
+    ex.Color = belief2color(b)
     ex.P = p
     return ex
 }

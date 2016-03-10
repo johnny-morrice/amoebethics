@@ -7,7 +7,6 @@ import (
     "image"
     "image/color"
     "image/draw"
-    "image/png"
     "math"
     "os"
     "runtime"
@@ -35,16 +34,22 @@ func main() {
     pool.run()
     for sc.Scan() {
         frdat := sc.Text()
-        pool.add(func() {
-            compile(params, frdat, i)
-        })
+        buildTask := func(frnum int) func () {
+            return func() {
+                err := compile(params, frdat, frnum)
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+                }
+            }
+        }
+        pool.add(buildTask(i))
         i++
     }
 
     pool.wait()
-    e := sc.Err()
-    if e != nil {
-        fmt.Fprintf(os.Stderr, "Read warning: %v\n", e)
+    scanerr := sc.Err()
+    if scanerr != nil {
+        fmt.Fprintf(os.Stderr, "Read warning: %v\n", scanerr)
     }
 }
 
@@ -67,21 +72,21 @@ func newGoPool(jobs uint) *goPool {
 func (pool *goPool) run() {
     go func() {
         for range pool.ready {
-            f := <-pool.work
-            go func() {
-                f()
-                pool.ready<- true
-            }()
+            f, ok := <-pool.work
+            if ok {
+                go func() {
+                    f()
+                    pool.ready<- true
+                    pool.hold.Done()
+                }()
+            }
         }
     }()
 }
 
 func (pool *goPool) add(f func()) {
     pool.hold.Add(1)
-    pool.work<- func() {
-        f()
-        pool.hold.Done()
-    }
+    pool.work<- f
 }
 
 func (pool *goPool) wait() {
@@ -100,36 +105,21 @@ func readArgs() args {
     return params
 }
 
-func compile(params args, frdat string, fnum int) {
+func compile(params args, frdat string, fnum int) error {
     r := strings.NewReader(frdat)
 
     fr, rerr := ani.ReadFrame(r)
     if rerr != nil {
-        fmt.Fprintf(os.Stderr,
-            "Error reading frame %v: %v\nFrame follows\n%v\n",
+        return fmt.Errorf("Error reading frame %v: %v\nFrame follows\n%v\n",
             fnum, rerr, frdat)
-        os.Exit(1)
     }
 
     img := render(fr, fnum, params)
 
     fname := fmt.Sprintf("%06d.png", fnum)
-    file, ferr := os.Create(fname)
+    err := dimg.SaveToPngFile(fname, img)
 
-    if ferr != nil {
-        fmt.Fprintf(os.Stderr,
-            "Error creating output png (%v): %v\n", fname, ferr)
-        os.Exit(1)
-    }
-
-    defer file.Close()
-
-    encerr := png.Encode(file, img)
-
-    if encerr != nil {
-        fmt.Fprintf(os.Stderr,
-            "Error encoding PNG: %v", encerr)
-    }
+    return err
 }
 
 func render(fr ani.Frame, fnum int, params args) image.Image {
@@ -173,7 +163,7 @@ type plot interface {
 
 type exploder struct {
     bombs []ani.Explosion
-    palette []ani.Color
+    palette ani.Palette
 }
 
 var _ plot = exploder{}
@@ -181,29 +171,29 @@ var _ plot = exploder{}
 func plotExplode(fr ani.Frame) exploder {
     ex := exploder{}
     ex.bombs = fr.Explosions
-    ex.palette = fr.Palette
+    ex.palette = fr.Colors
     return ex
 }
 
 func (ex exploder) draw(gc d2d.GraphicContext) {
     for _, b := range ex.bombs {
-        c := ex.palette[b.Color]
-        alpha := b.Intensity / 2
-        trans := color.RGBA{c.R, c.G, c.B, alpha}
+        c := ex.palette.Get(b.Color)
+//        alpha := b.Intensity / 2
+        trans := color.RGBA{c.R, c.G, c.B, 255}
         gc.SetStrokeColor(trans)
         gc.SetFillColor(trans)
+        gc.SetLineWidth(1.0)
 
         lineCircle(gc, b.P.X, b.P.Y, b.Radius)
 
-        fmt.Printf("Color was %v: %v\n", b.Color, trans)
         gc.Close()
-        gc.Fill()
+        gc.Stroke()
     }
 }
 
 type boxplot struct {
     boxes []ani.ColorBox
-    palette []ani.Color
+    palette ani.Palette
 }
 
 type circleplot struct {
@@ -216,31 +206,59 @@ var white = color.RGBA{0xff, 0xff, 0xff, 0xff}
 var clear = color.RGBA{0, 0, 0, 0}
 
 func lineCircle(gc d2d.GraphicContext, cx, cy, r float64) {
-    const blowup = 100.0
-    step := 1.0 / (r * blowup)
+    count := int(1000.0 * r)
+
+    trace := traceCircle(count, cx, cy, r)
 
     gc.MoveTo(cx + r, cy)
 
-    max := math.Pi * 2
-    for t := 0.0; t < max; t += step {
-        x := cx + (math.Cos(t) * r)
-        y := cy + (math.Sin(t) * r)
-        gc.LineTo(x, y)
+    for _, pos := range trace {
+        gc.LineTo(pos.X, pos.Y)
     }
 }
 
 func (c circleplot) draw(gc d2d.GraphicContext) {
     for _, cb := range c.boxes {
+        x := cb.P.X
+        y := cb.P.Y
         gc.SetStrokeColor(black)
         gc.SetFillColor(clear)
         gc.SetLineWidth(1.0)
 
-        lineCircle(gc, cb.P.X, cb.P.Y, cb.Radius)
+        lineCircle(gc, x, y, cb.Radius)
 
         gc.Close()
         gc.FillStroke()
 
+        // Inner shades
+        round := traceCircle(len(cb.Colors), x, y, cb.Radius / 2.0)
+
+        for i, pos := range round {
+            shade := cb.Colors[i]
+            prim := c.palette.Get(shade)
+            col := color.RGBA{prim.R, prim.G, prim.B, 255}
+            gc.SetStrokeColor(col)
+            gc.SetFillColor(clear)
+            gc.SetLineWidth(1.0)
+
+            lineCircle(gc, pos.X, pos.Y, cb.Radius / 10)
+            gc.Close()
+            gc.FillStroke()
+        }
     }
+}
+
+func traceCircle(count int, cx, cy, r float64) []core.UserVec {
+    trace := make([]core.UserVec, count)
+    step := (math.Pi * 2) / float64(count)
+    t := 0.0
+    for i := 0; i < count; i ++ {
+        x := cx + (math.Cos(t) * r)
+        y := cy + (math.Sin(t) * r)
+        trace[i] = core.UserVec{x, y}
+        t += step
+    }
+    return trace
 }
 
 type squareplot struct {
@@ -255,23 +273,27 @@ func (c squareplot) draw(gc d2d.GraphicContext) {
         gc.SetLineWidth(1.0)
 
         side := cb.Radius / 2.0
-        xmin, ymin := cb.P.X - side, cb.P.Y - side
-        xmax, ymax := cb.P.X + side, cb.P.Y + side
-
-        gc.MoveTo(xmin, ymin)
-        gc.LineTo(xmin, ymax)
-        gc.LineTo(xmax, ymax)
-        gc.LineTo(xmax, ymin)
-        gc.LineTo(xmin, ymin)
+        lineSquare(gc, cb.P.X, cb.P.Y, side)
         gc.Close()
         gc.FillStroke()
     }
 }
 
+func lineSquare(gc d2d.GraphicContext, x, y, side float64) {
+    xmin, ymin := x - side, y - side
+    xmax, ymax := x + side, y + side
+
+    gc.MoveTo(xmin, ymin)
+    gc.LineTo(xmin, ymax)
+    gc.LineTo(xmax, ymax)
+    gc.LineTo(xmax, ymin)
+    gc.LineTo(xmin, ymin)
+}
+
 func plotShape(sh string, fr ani.Frame) plot {
     boxp := boxplot{}
     boxp.boxes = fr.Shapes[sh]
-    boxp.palette = fr.Palette
+    boxp.palette = fr.Colors
 
     switch sh {
     case "circle":
@@ -290,7 +312,7 @@ func trans(w, h int, t core.Torus) d2d.Matrix {
     right := t.W / 2
     bottom := - t.H / 2
     top := t.H / 2
-    from := [4]float64{left, bottom, right, top}
-    to := [4]float64{0, fh, fw, 0}
+    from := [4]float64{left, top, right, bottom}
+    to := [4]float64{0, 0, fw, fh}
     return d2d.NewMatrixFromRects(from, to)
 }

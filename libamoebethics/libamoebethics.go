@@ -4,7 +4,6 @@ import (
     "encoding/json"
     "fmt"
     "io"
-    "sync"
 )
 
 func ReadSimPkt(r io.Reader) (SimPacket, error) {
@@ -77,7 +76,7 @@ func (s *Sim) step() {
 
 func (s *Sim) moment() SimPacket {
     usernodes := make([]UserNode, len(s.Nodes))
-    s.Ceach(func (sn *SimNode) {
+    s.Each(func (sn *SimNode) {
         un := SimNode2UserNode(sn)
         usernodes[sn.Id] = un
     })
@@ -89,10 +88,10 @@ func (s *Sim) moment() SimPacket {
 
 
 func (s *Sim) attachNodes() {
-    s.Ceach(func (n *SimNode) {
+    s.Each(func (n *SimNode) {
         n.changeBuffer.ClearNeighbours()
     })
-    s.Ceach(func (n *SimNode) {
+    s.Each(func (n *SimNode) {
         s.Each(func (m *SimNode) {
             n.Handshake(m.changeBuffer, s)
         })
@@ -100,7 +99,7 @@ func (s *Sim) attachNodes() {
 }
 
 func (s *Sim) nodeHandlers() {
-    s.Ceach(func (n *SimNode) {
+    s.Each(func (n *SimNode) {
         n.Update(s)
     })
     s.Each(func (n *SimNode) {
@@ -112,19 +111,6 @@ func (s *Sim) Each(f func(n *SimNode)) {
     for _, n := range s.Nodes {
         f(n)
     }
-}
-
-func (s *Sim) Ceach(f func(n *SimNode)) {
-    count := len(s.Nodes)
-    hold := sync.WaitGroup{}
-    hold.Add(count)
-    for _, n := range s.Nodes {
-        go func(node *SimNode) {
-            f(node)
-            hold.Done()
-        }(n)
-    }
-    hold.Wait()
 }
 
 type SimBase struct {
