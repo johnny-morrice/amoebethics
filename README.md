@@ -4,6 +4,9 @@
 
 ### Installation
 
+    $ go get github.com/johnny-morrice/amoebethics
+    $ go install github.com/johnny-morrice/amoebethics...
+
 ---
 
 ### Node types
