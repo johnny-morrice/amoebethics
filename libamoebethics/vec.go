@@ -26,6 +26,8 @@ type screen struct {
     h uint
 }
 
+// TorusScreen provides a mapping between a toroidal space and
+// the screen.
 type TorusScreen struct {
     screen
     t Torus
@@ -34,6 +36,8 @@ type TorusScreen struct {
 func MakeTorusScreen(t Torus, w, h uint) TorusScreen {
     ts := TorusScreen{}
     ts.t = t
+    ts.w = w
+    ts.h = h
     return ts
 }
 
@@ -44,7 +48,7 @@ func (ts TorusScreen) pixelSize() (float64, float64) {
     return fw / ts.t.W, fh / ts.t.H
 }
 
-// Project a point on the torus onto the screen
+// Project a point on the torus onto the screen.
 func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
     xUnit, yUnit := ts.pixelSize()
 
@@ -54,7 +58,7 @@ func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
     }
     reflect := mat64.NewDense(2, 2, reflectComps)
 
-    trans := Vec2(0, float64(ts.t.H) / 2.0)
+    trans := Vec2(float64(ts.t.W) / 2.0, float64(ts.t.H) / 2.0)
 
     // Scaling matrix
     scaleComps := []float64{
@@ -64,7 +68,7 @@ func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
     scale := mat64.NewDense(2, 2, scaleComps)
 
     pr := Vec2(0, 0)
-    pr.MulVec(reflect, pr)
+    pr.MulVec(reflect, v)
     pr.AddVec(pr, trans)
     pr.MulVec(scale, pr)
 
@@ -74,11 +78,15 @@ func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
     return rx, ry
 }
 
+// Torus is a rectangular manifold on a toroidal surface.
 type Torus struct {
     W float64
     H float64
 }
 
+// Map produces a vector that is within the bounds of the
+// rectangular manifold of toroidal space, given a vector
+// that is on the torus but may be outside these bounds.
 func (t Torus) Map(v *mat64.Vector) {
     x := v.At(0, 0)
     y := v.At(1, 0)
@@ -98,6 +106,8 @@ func (t Torus) Map(v *mat64.Vector) {
     v.SetVec(1, remy)
 }
 
+// Explodes returns true when pos is within radius of an explosion at centre,
+// with respect to toroidal topology.
 func (t Torus) Explodes(radius float64, center, pos *mat64.Vector) bool {
     diff := Vec2(0.0, 0.0)
     diff.CloneVec(center)
@@ -110,6 +120,8 @@ func (t Torus) Explodes(radius float64, center, pos *mat64.Vector) bool {
     return false
 }
 
+// Projections produces a list of alternative positions on the
+// rectangular manifold of toroidal space.
 func (t Torus) Projections(pos *mat64.Vector) []*mat64.Vector {
     right := Vec2(t.W, 0.0)
     top := Vec2(0.0, t.H)

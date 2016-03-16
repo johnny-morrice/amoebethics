@@ -70,3 +70,38 @@ func explodeTest(t *testing.T, radius float64, center, inPos, outPos *mat64.Vect
         t.Error("Erroneously exploded")
     }
 }
+
+func TestTorusScreenProject(t *testing.T) {
+    torus := Torus{W: 10, H: 10,}
+    ts := MakeTorusScreen(torus, 100, 100)
+
+    input := []*mat64.Vector{
+        Vec2(0, 0),
+        Vec2(1, 1),
+        Vec2(1, -2),
+        Vec2(-2, -1),
+        Vec2(-1, 2),
+    }
+
+    expects := []uint{
+        50, 50,
+        60, 40,
+        60, 70,
+        30, 60,
+        40, 30,
+    }
+
+    for i, v := range input {
+        ax, ay := ts.Project(v)
+        ei := 2 * i
+        ej := ei + 1
+        ex := expects[ei]
+        ey := expects[ej]
+        if ax != ex || ay != ey {
+            t.Error("Error on vector", i,
+                ": expected (", ex, ",", ey, 
+                ") but received (", 
+                ax, ", ", ay, ")")
+        }
+    }
+}
