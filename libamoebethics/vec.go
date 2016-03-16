@@ -21,6 +21,59 @@ func BlasVec2UserVec(v *mat64.Vector) UserVec {
     return u
 }
 
+type screen struct {
+    w uint
+    h uint
+}
+
+type TorusScreen struct {
+    screen
+    t Torus
+}
+
+func MakeTorusScreen(t Torus, w, h uint) TorusScreen {
+    ts := TorusScreen{}
+    ts.t = t
+    return ts
+}
+
+func (ts TorusScreen) pixelSize() (float64, float64) {
+    fw := float64(ts.w)
+    fh := float64(ts.h)
+
+    return fw / ts.t.W, fh / ts.t.H
+}
+
+// Project a point on the torus onto the screen
+func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
+    xUnit, yUnit := ts.pixelSize()
+
+    reflectComps := []float64{
+        1, 0,
+        0, -1,
+    }
+    reflect := mat64.NewDense(2, 2, reflectComps)
+
+    trans := Vec2(0, float64(ts.t.H) / 2.0)
+
+    // Scaling matrix
+    scaleComps := []float64{
+        xUnit, 0,
+        0, yUnit,
+    }
+    scale := mat64.NewDense(2, 2, scaleComps)
+
+    pr := Vec2(0, 0)
+    pr.MulVec(reflect, pr)
+    pr.AddVec(pr, trans)
+    pr.MulVec(scale, pr)
+
+    rx := uint(math.Floor(pr.At(0, 0)))
+    ry := uint(math.Floor(pr.At(1, 0)))
+
+    return rx, ry
+}
+
 type Torus struct {
     W float64
     H float64
