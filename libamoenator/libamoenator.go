@@ -9,7 +9,13 @@ import (
 
 type PreFrame struct {
     core.SimBase
+    Width uint
+    Height uint
     Colors Palette
+}
+
+func (pf *PreFrame) SurfaceDims() (uint, uint) {
+    return pf.Width, pf.Height
 }
 
 type Palette []Color
@@ -102,6 +108,7 @@ func belief2color(b core.Belief) Coldex {
 
 type Renderer struct {
     pre PreFrame
+    torscreen core.TorusScreen
     framecnt uint
     fr *Frame
     nodes []*core.SimNode
@@ -113,6 +120,8 @@ type Renderer struct {
 }
 
 type RenderFactory struct {
+    Width uint
+    Height uint
     Yard core.EntityYard
     Framecnt uint
     EntShapes map[string]string
@@ -133,6 +142,9 @@ func (fact RenderFactory) Build(pkt core.SimPacket, palette []Color) (Renderer, 
 
     r.pre.SimBase = pkt.SimBase
     r.pre.Colors = palette
+    r.pre.Width = fact.Width
+    r.pre.Height = fact.Height
+    r.torscreen = core.MakeTorusScreen(r.pre.Torus, fact.Width, fact.Height)
     r.pkt = pkt
     seqmax := float64(fact.Framecnt)
     r.slot = 1.0 / seqmax

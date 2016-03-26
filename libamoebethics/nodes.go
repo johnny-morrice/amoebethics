@@ -145,3 +145,11 @@ func Entity2String(e Entity) string {
     }
     return buff.String()
 }
+
+func MapNode(ts TorusScreen, sn *SimNode) *SimNode {
+    nxt := new(SimNode)
+    *nxt = *sn
+    x, y := ts.Project(sn.P)
+    nxt.P = Vec2(float64(x), float64(y)) 
+    return nxt
+}

@@ -19,8 +19,6 @@ import (
 )
 
 type args struct {
-    w uint
-    h uint
     jobs uint
 }
 
@@ -36,7 +34,7 @@ func main() {
         frdat := sc.Text()
         buildTask := func(frnum int) func () {
             return func() {
-                err := compile(params, frdat, frnum)
+                err := compile(frdat, frnum)
                 if err != nil {
                     fmt.Fprintf(os.Stderr, "Error: %v\n", err)
                 }
@@ -98,14 +96,12 @@ func (pool *goPool) wait() {
 func readArgs() args {
     defjobs := uint(runtime.NumCPU())
     params := args{}
-    flag.UintVar(&params.w, "width", 1920, "width")
-    flag.UintVar(&params.h, "height", 1080, "height")
     flag.UintVar(&params.jobs, "jobs", defjobs, "jobs")
     flag.Parse()
     return params
 }
 
-func compile(params args, frdat string, fnum int) error {
+func compile(frdat string, fnum int) error {
     r := strings.NewReader(frdat)
 
     fr, rerr := ani.ReadFrame(r)
@@ -114,7 +110,7 @@ func compile(params args, frdat string, fnum int) error {
             fnum, rerr, frdat)
     }
 
-    img := render(fr, fnum, params)
+    img := render(fr, fnum)
 
     fname := fmt.Sprintf("%06d.png", fnum)
     err := dimg.SaveToPngFile(fname, img)
@@ -122,12 +118,11 @@ func compile(params args, frdat string, fnum int) error {
     return err
 }
 
-func render(fr ani.Frame, fnum int, params args) image.Image {
-    w, h := int(params.w), int(params.h)
-    tr := trans(w, h, fr.Torus)
+func render(fr ani.Frame, fnum int) image.Image {
+    w, h := fr.SurfaceDims()
 
     // Blank white image
-    bounds := image.Rect(0,0, w, h)
+    bounds := image.Rect(0,0, int(w), int(h))
     dest := image.NewRGBA(bounds)
     draw.Draw(dest, bounds, &image.Uniform{white}, image.ZP, draw.Src)
 
@@ -147,8 +142,6 @@ func render(fr ani.Frame, fnum int, params args) image.Image {
 
     gc.SetStrokeColor(black)
     gc.SetFillColor(black)
-
-    gc.SetMatrixTransform(tr)
 
     for _, plot := range plts {
         plot.draw(gc)
@@ -304,15 +297,4 @@ func plotShape(sh string, fr ani.Frame) plot {
         panic(fmt.Sprintf("Unknown shape type: %v", sh))
         return nil
     }
-}
-
-func trans(w, h int, t core.Torus) d2d.Matrix {
-    fw, fh := float64(w), float64(h)
-    left := -t.W / 2
-    right := t.W / 2
-    bottom := - t.H / 2
-    top := t.H / 2
-    from := [4]float64{left, top, right, bottom}
-    to := [4]float64{0, 0, fw, fh}
-    return d2d.NewMatrixFromRects(from, to)
 }

@@ -78,6 +78,11 @@ func (ts TorusScreen) Project(v *mat64.Vector) (uint, uint) {
     return rx, ry
 }
 
+// TODO: horrible
+func (ts TorusScreen) Scale(r float64) float64 {
+    return (float64(ts.w) / ts.t.W) * r
+}
+
 // Torus is a rectangular manifold on a toroidal surface.
 type Torus struct {
     W float64

@@ -13,7 +13,11 @@ import (
 
 func main() {
     count := uint(30)
-    flag.UintVar(&count, "framecnt", 30, "Frames generated per simulation packet")
+    width := uint(1920)
+    height := uint(1080)
+    flag.UintVar(&count, "framecnt", count, "Frames generated per simulation packet")
+    flag.UintVar(&width, "width", width, "Width of output surface")
+    flag.UintVar(&height, "height", height, "Height of output surface")
     flag.Parse()
 
     yard := ext.StdExtensions()
@@ -21,6 +25,8 @@ func main() {
     groups := animate.StdGroupFacts
 
     fact := animate.RenderFactory{}
+    fact.Width = width
+    fact.Height = height
     fact.Yard = yard
     fact.Framecnt = count
     fact.EntShapes = shapes
